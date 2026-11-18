@@ -102,7 +102,11 @@ export class SupabaseJwtGuard implements CanActivate {
     }
 
     const parts = authorizationHeader.trim().split(/\s+/);
-    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer' || !parts[1]) {
+    if (
+      parts.length !== 2 ||
+      parts[0].toLowerCase() !== 'bearer' ||
+      !parts[1]
+    ) {
       throw new DomainException(
         'TOKEN_INVALIDO',
         'Formato de encabezado Authorization inválido; se esperaba Bearer <token>',
@@ -171,7 +175,7 @@ export class SupabaseJwtGuard implements CanActivate {
             return;
           }
 
-          resolve(decoded as SupabaseJwtPayload);
+          resolve(decoded);
         },
       );
     });

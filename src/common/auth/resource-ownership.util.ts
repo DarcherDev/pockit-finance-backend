@@ -12,7 +12,11 @@ export const assertResourceOwnership = (
   const normalizedOwner = ownerUsrId?.trim();
   const normalizedCurrent = currentUsrId?.trim();
 
-  if (!normalizedOwner || !normalizedCurrent || normalizedOwner !== normalizedCurrent) {
+  if (
+    !normalizedOwner ||
+    !normalizedCurrent ||
+    normalizedOwner !== normalizedCurrent
+  ) {
     throw new DomainException(
       'RECURSO_NO_AUTORIZADO',
       'No tienes permisos para acceder o modificar este recurso',

@@ -16,7 +16,8 @@ jest.mock('jwks-rsa', () => jest.fn());
 describe('SupabaseJwtGuard', () => {
   const supabaseUrl = 'https://demo-project.supabase.co/';
   const expectedIssuer = 'https://demo-project.supabase.co/auth/v1';
-  const jwksUri = 'https://demo-project.supabase.co/auth/v1/.well-known/jwks.json';
+  const jwksUri =
+    'https://demo-project.supabase.co/auth/v1/.well-known/jwks.json';
   const validUsrId = '550e8400-e29b-41d4-a716-446655440000';
 
   const { privateKey, publicKey } = generateKeyPairSync('rsa', {
@@ -39,7 +40,13 @@ describe('SupabaseJwtGuard', () => {
 
   const createMockContext = (
     authorization?: string,
-  ): { context: ExecutionContext; request: { headers: Record<string, string | undefined>; user?: AuthenticatedUser } } => {
+  ): {
+    context: ExecutionContext;
+    request: {
+      headers: Record<string, string | undefined>;
+      user?: AuthenticatedUser;
+    };
+  } => {
     const request: {
       headers: Record<string, string | undefined>;
       user?: AuthenticatedUser;
