@@ -4,11 +4,11 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource, EntityManager } from 'typeorm';
 import { AppModule } from './../src/app.module';
-import { SupabaseAuthService } from './../src/auth/services/supabase-auth.service';
-import { CategoriasService } from './../src/categorias/services/categorias.service';
+import { SupabaseAuthService } from './../src/auth/infrastructure/adapters/supabase-auth.service';
+import { CategoriasService } from './../src/categorias/application/services/categorias.service';
 import { configureApp } from './../src/common/bootstrap/configure-app';
-import { UsuarioResponse } from './../src/usuarios/dto/response/usuario.response';
-import { UsuariosService } from './../src/usuarios/services/usuarios.service';
+import { UsuariosService } from './../src/usuarios/application/services/usuarios.service';
+import { UsuarioResponse } from './../src/usuarios/presentation/dto/response/usuario.response';
 
 describe('HU-02.1 Registro de Usuario (e2e)', () => {
   let app: INestApplication<App>;

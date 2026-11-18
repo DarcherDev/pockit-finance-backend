@@ -1,10 +1,18 @@
 import { Module } from '@nestjs/common';
-import { HealthController } from './controllers/health.controller';
-import { HealthRepository } from './repositories/health.repository';
-import { HealthService } from './services/health.service';
+import { HealthService } from './application/services/health.service';
+import { HEALTH_PROBE_PORT } from './domain/ports/out/health-probe.port';
+import { HealthRepository } from './infrastructure/persistence/health.repository';
+import { HealthController } from './presentation/controllers/health.controller';
 
 @Module({
   controllers: [HealthController],
-  providers: [HealthService, HealthRepository],
+  providers: [
+    HealthService,
+    HealthRepository,
+    {
+      provide: HEALTH_PROBE_PORT,
+      useExisting: HealthRepository,
+    },
+  ],
 })
 export class HealthModule {}

@@ -4,10 +4,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
-import { SupabaseAuthService } from './../src/auth/services/supabase-auth.service';
+import { SupabaseAuthService } from './../src/auth/infrastructure/adapters/supabase-auth.service';
 import { configureApp } from './../src/common/bootstrap/configure-app';
 import { DomainException } from './../src/common/exceptions/domain.exception';
-import { UsuariosService } from './../src/usuarios/services/usuarios.service';
+import { UsuariosService } from './../src/usuarios/application/services/usuarios.service';
 
 describe('HU-02.3 Recuperación y Restablecimiento de Contraseña por Correo (e2e)', () => {
   let app: INestApplication<App>;

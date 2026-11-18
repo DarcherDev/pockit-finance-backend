@@ -4,6 +4,7 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { DomainError } from '../domain/domain.error';
 import { DomainException } from '../exceptions/domain.exception';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
@@ -22,6 +23,25 @@ describe('AllExceptionsFilter', () => {
         getResponse: () => ({ status: statusMock }),
       }),
     } as unknown as ArgumentsHost;
+  });
+
+  it('formatea DomainError puro con { statusCode, code, message, details }', () => {
+    const error = new DomainError(
+      'CORREO_YA_REGISTRADO',
+      'El correo ya existe',
+      HttpStatus.CONFLICT,
+      { field: 'correo' },
+    );
+
+    filter.catch(error, host);
+
+    expect(statusMock).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    expect(jsonMock).toHaveBeenCalledWith({
+      statusCode: 409,
+      code: 'CORREO_YA_REGISTRADO',
+      message: 'El correo ya existe',
+      details: { field: 'correo' },
+    });
   });
 
   it('formatea DomainException con { statusCode, code, message, details }', () => {

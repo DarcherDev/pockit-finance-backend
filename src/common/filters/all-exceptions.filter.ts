@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { DomainError } from '../domain/domain.error';
 import { DomainException } from '../exceptions/domain.exception';
 
 interface ErrorResponseBody {
@@ -39,6 +40,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private buildErrorBody(exception: unknown): ErrorResponseBody {
+    if (exception instanceof DomainError) {
+      return {
+        statusCode: exception.statusCode,
+        code: exception.code,
+        message: exception.message,
+        details: exception.details ?? null,
+      };
+    }
+
     if (exception instanceof DomainException) {
       return {
         statusCode: exception.getStatus(),

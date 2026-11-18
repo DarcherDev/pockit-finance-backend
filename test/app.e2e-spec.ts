@@ -15,9 +15,9 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/common/bootstrap/configure-app';
 import { DomainException } from './../src/common/exceptions/domain.exception';
-import { HealthController } from './../src/health/controllers/health.controller';
-import { HealthRepository } from './../src/health/repositories/health.repository';
-import { HealthService } from './../src/health/services/health.service';
+import { HealthService } from './../src/health/application/services/health.service';
+import { HEALTH_PROBE_PORT } from './../src/health/domain/ports/out/health-probe.port';
+import { HealthController } from './../src/health/presentation/controllers/health.controller';
 
 class QaValidationDto {
   @IsString()
@@ -185,7 +185,7 @@ describe('HU-01.1 Bootstrap & Health (e2e)', () => {
         providers: [
           HealthService,
           {
-            provide: HealthRepository,
+            provide: HEALTH_PROBE_PORT,
             useValue: failingRepository,
           },
         ],
