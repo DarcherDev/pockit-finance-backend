@@ -31,9 +31,9 @@ describe('utc-timestamp.serializer', () => {
     it('convierte Date/string en to() a Date UTC y en from() a ISO-8601 UTC', () => {
       expect(utcTimestampTransformer.to(null)).toBeNull();
       expect(utcTimestampTransformer.to(undefined)).toBeNull();
-      expect(
-        utcTimestampTransformer.to('2026-11-17T21:30:00-05:00'),
-      ).toEqual(new Date('2026-11-18T02:30:00.000Z'));
+      expect(utcTimestampTransformer.to('2026-11-17T21:30:00-05:00')).toEqual(
+        new Date('2026-11-18T02:30:00.000Z'),
+      );
 
       expect(utcTimestampTransformer.from(null)).toBeNull();
       expect(utcTimestampTransformer.from(undefined)).toBeNull();

@@ -19,10 +19,7 @@ export const ALLOWED_CORS_METHODS = [
 
 export const ALLOWED_CORS_HEADERS = ['Authorization', 'Content-Type', 'Accept'];
 
-export type CorsOriginCallback = (
-  err: Error | null,
-  allow?: boolean,
-) => void;
+export type CorsOriginCallback = (err: Error | null, allow?: boolean) => void;
 
 export const parseCorsOrigins = (corsOriginsRaw = ''): string[] => {
   const extraOrigins = corsOriginsRaw
@@ -53,7 +50,10 @@ export const createCorsOriginValidator = (
       return;
     }
 
-    if (allowLocalhostPorts && LOCALHOST_PORT_ORIGIN_REGEX.test(requestOrigin)) {
+    if (
+      allowLocalhostPorts &&
+      LOCALHOST_PORT_ORIGIN_REGEX.test(requestOrigin)
+    ) {
       callback(null, true);
       return;
     }
