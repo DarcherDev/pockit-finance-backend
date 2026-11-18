@@ -38,6 +38,12 @@ API backend de **Pockit Finance**, sistema móvil y web de auditoría y finanzas
 
 > **Nota:** `synchronize` está desactivado (`false`) en `src/config/database.config.ts` porque el esquema de base de datos se gestiona mediante scripts SQL / migraciones externas.
 
+## Autenticación JWT y Seguridad (Defensa en Profundidad)
+
+- Todas las rutas de la API están protegidas por defecto mediante `SupabaseJwtGuard` (`APP_GUARD`), que verifica criptográficamente el token `Bearer` contra `SUPABASE_JWKS_URL` y valida que el usuario (`sub`) exista en `public.usuarios`.
+- Las rutas públicas explícitas (como `GET /api/health`) se declaran con `@Public()`.
+- El script [`src/database/scripts/rls-policies.sql`](src/database/scripts/rls-policies.sql) habilita **Row Level Security (RLS)** y políticas basadas en `auth.uid()` para las 7 tablas de negocio de `pockit-ares.sql`. Ejecútalo en el SQL Editor de Supabase después de aplicar el esquema inicial.
+
 ## Ejecución
 
 ```bash
