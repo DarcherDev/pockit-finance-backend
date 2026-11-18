@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { DomainException } from '../../common/exceptions/domain.exception';
 
 export interface CreateSupabaseUserParams {
@@ -15,7 +15,7 @@ export interface SupabaseAuthUser {
 
 @Injectable()
 export class SupabaseAuthService {
-  private readonly supabase: SupabaseClient;
+  private readonly supabase: ReturnType<typeof createClient>;
 
   constructor(private readonly configService: ConfigService) {
     const supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');

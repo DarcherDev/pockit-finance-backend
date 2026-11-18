@@ -84,13 +84,14 @@ describe('CategoriasRepository', () => {
       create: jest.fn().mockReturnValue(entity),
       save: jest.fn().mockResolvedValue([entity]),
     };
+    const getRepositoryMock = jest.fn().mockReturnValue(managerRepoMock);
     const managerMock = {
-      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+      getRepository: getRepositoryMock,
     } as unknown as EntityManager;
 
     const result = await repository.createMany(items, managerMock);
 
-    expect(managerMock.getRepository).toHaveBeenCalledWith(CategoriaEntity);
+    expect(getRepositoryMock).toHaveBeenCalledWith(CategoriaEntity);
     expect(managerRepoMock.create).toHaveBeenCalledWith(items[0]);
     expect(managerRepoMock.save).toHaveBeenCalledWith([entity]);
     expect(typeOrmRepo.save).not.toHaveBeenCalled();

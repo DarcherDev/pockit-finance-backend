@@ -32,13 +32,18 @@ describe('AuthController', () => {
 
   it('marca el endpoint registrar como @Public() y con HTTP 201 Created', () => {
     const reflector = new Reflector();
+    const registrarTarget = Object.getOwnPropertyDescriptor(
+      AuthController.prototype,
+      'registrar',
+    )?.value as object;
+
     const isPublic = reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      AuthController.prototype.registrar,
+      registrarTarget,
       AuthController,
     ]);
     const httpCode = Reflect.getMetadata(
       HTTP_CODE_METADATA,
-      AuthController.prototype.registrar,
+      registrarTarget,
     ) as number;
 
     expect(isPublic).toBe(true);

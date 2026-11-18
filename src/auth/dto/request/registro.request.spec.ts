@@ -17,7 +17,7 @@ describe('RegistroRequest', () => {
   };
 
   it('acepta un payload válido', async () => {
-    const result = await pipe.transform(validPayload, {
+    const result: unknown = await pipe.transform(validPayload, {
       type: 'body',
       metatype: RegistroRequest,
     });

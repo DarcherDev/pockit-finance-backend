@@ -41,9 +41,11 @@ describe('AuthService', () => {
     };
 
     dataSource = {
-      transaction: jest.fn(async (cb: (manager: EntityManager) => unknown) =>
-        cb(managerMock),
-      ) as unknown as jest.Mocked<Pick<DataSource, 'transaction'>>['transaction'],
+      transaction: jest.fn((cb: (manager: EntityManager) => unknown) =>
+        Promise.resolve(cb(managerMock)),
+      ) as unknown as jest.Mocked<
+        Pick<DataSource, 'transaction'>
+      >['transaction'],
     };
 
     const module: TestingModule = await Test.createTestingModule({
