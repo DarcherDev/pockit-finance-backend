@@ -1,5 +1,7 @@
+import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EntityManager } from 'typeorm';
+import { DomainException } from '../../common/exceptions/domain.exception';
 import { UsuarioResponse } from '../dto/response/usuario.response';
 import { UsuarioEntity } from '../entities/usuario.entity';
 import { UsuariosMapper } from '../mapper/usuarios.mapper';
@@ -121,5 +123,46 @@ describe('UsuariosService', () => {
     expect(repository.create).toHaveBeenCalledWith(payload, manager);
     expect(result).toBeInstanceOf(UsuarioResponse);
     expect(result.usrId).toBe(payload.usrId);
+  });
+
+  it('obtenerPerfil retorna UsuarioResponse cuando el usuario existe', async () => {
+    const entity = new UsuarioEntity();
+    entity.usrId = '550e8400-e29b-41d4-a716-446655440000';
+    entity.usrCorreo = 'ana@pockit.finance';
+    entity.usrNombre = 'Ana';
+    entity.usrApellido = 'García';
+    entity.usrEdad = 28;
+    entity.usrCreadoEn = '2026-11-17T10:00:00.000Z';
+    entity.usrActualizadoEn = '2026-11-17T10:00:00.000Z';
+
+    repository.findById.mockResolvedValue(entity);
+
+    const result = await service.obtenerPerfil(entity.usrId);
+
+    expect(repository.findById).toHaveBeenCalledWith(entity.usrId);
+    expect(result).toBeInstanceOf(UsuarioResponse);
+    expect(result).toEqual({
+      usrId: entity.usrId,
+      usrCorreo: 'ana@pockit.finance',
+      usrNombre: 'Ana',
+      usrApellido: 'García',
+      usrEdad: 28,
+      usrCreadoEn: '2026-11-17T10:00:00.000Z',
+      usrActualizadoEn: '2026-11-17T10:00:00.000Z',
+    });
+  });
+
+  it('obtenerPerfil lanza DomainException 404 USUARIO_NO_ENCONTRADO si el usuario no existe', async () => {
+    repository.findById.mockResolvedValue(null);
+
+    const promise = service.obtenerPerfil(
+      '550e8400-e29b-41d4-a716-446655440999',
+    );
+
+    await expect(promise).rejects.toBeInstanceOf(DomainException);
+    await expect(promise).rejects.toMatchObject({
+      code: 'USUARIO_NO_ENCONTRADO',
+      status: HttpStatus.NOT_FOUND,
+    });
   });
 });
