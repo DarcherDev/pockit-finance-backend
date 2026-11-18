@@ -74,4 +74,43 @@ describe('envValidationSchema', () => {
 
     expect(error).toBeDefined();
   });
+
+  it('falla si SUPABASE_JWKS_URL no es una URL válida', () => {
+    const { error } = envValidationSchema.validate(
+      {
+        ...validEnv,
+        SUPABASE_JWKS_URL: 'not-a-jwks-url',
+      },
+      { allowUnknown: true },
+    );
+
+    expect(error).toBeDefined();
+  });
+
+  it.each(['DATABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY'])(
+    'falla si %s es una cadena vacía',
+    (emptyKey) => {
+      const { error } = envValidationSchema.validate(
+        {
+          ...validEnv,
+          [emptyKey]: '',
+        },
+        { allowUnknown: true },
+      );
+
+      expect(error).toBeDefined();
+    },
+  );
+
+  it.each([70000, 'abc'])('falla si PORT es inválido (%p)', (invalidPort) => {
+    const { error } = envValidationSchema.validate(
+      {
+        ...validEnv,
+        PORT: invalidPort,
+      },
+      { allowUnknown: true },
+    );
+
+    expect(error).toBeDefined();
+  });
 });

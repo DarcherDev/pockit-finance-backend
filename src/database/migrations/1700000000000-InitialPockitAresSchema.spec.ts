@@ -50,6 +50,31 @@ describe('InitialPockitAresSchema1700000000000', () => {
       'CREATE TABLE IF NOT EXISTS public.esquema_versiones',
     );
     expect(fullSql).toContain('INSERT INTO public.esquema_versiones');
+
+    for (const constraintName of [
+      'chk_cta_no_autopadre',
+      'chk_cta_naturaleza_principal',
+      'chk_ser_cuotas',
+      'chk_trx_no_autopar',
+      'chk_trx_origen_coherente',
+    ]) {
+      expect(fullSql).toContain(`CONSTRAINT ${constraintName}`);
+    }
+
+    for (const indexName of [
+      'idx_cta_usr_id',
+      'idx_cta_cta_padre_id',
+      'uq_cat_usr_nombre_naturaleza',
+      'uq_etq_usr_nombre',
+      'idx_ser_activas_proxima',
+      'idx_trx_cta_fecha',
+      'idx_trx_cat_fecha',
+      'idx_trx_estado',
+      'idx_trx_ser_id',
+      'idx_txe_etq_id',
+    ]) {
+      expect(fullSql).toContain(indexName);
+    }
   });
 
   it('down elimina índices, 7 tablas y 6 ENUMs en orden inverso sin BEGIN/COMMIT', async () => {
@@ -62,6 +87,21 @@ describe('InitialPockitAresSchema1700000000000', () => {
 
     expect(fullSql).not.toMatch(/\bBEGIN\b/i);
     expect(fullSql).not.toMatch(/\bCOMMIT\b/i);
+
+    for (const indexName of [
+      'idx_txe_etq_id',
+      'idx_trx_ser_id',
+      'idx_trx_estado',
+      'idx_trx_cat_fecha',
+      'idx_trx_cta_fecha',
+      'idx_ser_activas_proxima',
+      'uq_etq_usr_nombre',
+      'uq_cat_usr_nombre_naturaleza',
+      'idx_cta_cta_padre_id',
+      'idx_cta_usr_id',
+    ]) {
+      expect(fullSql).toContain(`DROP INDEX IF EXISTS public.${indexName}`);
+    }
 
     expect(fullSql).toContain(
       'DROP TABLE IF EXISTS public.transaccion_etiquetas',
