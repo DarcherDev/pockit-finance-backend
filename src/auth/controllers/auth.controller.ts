@@ -1,12 +1,22 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { UsuarioResponse } from '../../usuarios/dto/response/usuario.response';
 import { Public } from '../decorators/public.decorator';
 import {
   LoginRequest,
   LoginResponse,
+  MensajeResponse,
+  RecuperarPasswordRequest,
   RefreshTokenRequest,
   RefreshTokenResponse,
   RegistroRequest,
+  RestablecerPasswordRequest,
 } from '../dto';
 import { AuthService } from '../services/auth.service';
 
@@ -33,5 +43,24 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   refresh(@Body() dto: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     return this.authService.refresh(dto);
+  }
+
+  @Public()
+  @Post('recuperar-password')
+  @HttpCode(HttpStatus.OK)
+  recuperarPassword(
+    @Body() dto: RecuperarPasswordRequest,
+  ): Promise<MensajeResponse> {
+    return this.authService.recuperarPassword(dto);
+  }
+
+  @Public()
+  @Post('restablecer-password')
+  @HttpCode(HttpStatus.OK)
+  restablecerPassword(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() dto: RestablecerPasswordRequest,
+  ): Promise<MensajeResponse> {
+    return this.authService.restablecerPassword(authorization, dto);
   }
 }
