@@ -33,19 +33,21 @@ describe('SupabaseAuthService', () => {
       refreshSession: jest.fn(),
     };
 
-    (createClient as jest.Mock).mockImplementation((_url: string, key: string) => {
-      if (key === 'sb_secret_test_key') {
-        return {
-          auth: {
-            admin: adminMock,
-          },
-        };
-      }
+    (createClient as jest.Mock).mockImplementation(
+      (_url: string, key: string) => {
+        if (key === 'sb_secret_test_key') {
+          return {
+            auth: {
+              admin: adminMock,
+            },
+          };
+        }
 
-      return {
-        auth: publicAuthMock,
-      };
-    });
+        return {
+          auth: publicAuthMock,
+        };
+      },
+    );
 
     configServiceMock = {
       getOrThrow: jest.fn((key: string) => {

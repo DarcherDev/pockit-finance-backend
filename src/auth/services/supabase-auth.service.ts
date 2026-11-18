@@ -112,11 +112,10 @@ export class SupabaseAuthService {
     email: string,
     password: string,
   ): Promise<SupabaseAuthSession> {
-    const { data, error } =
-      await this.supabasePublic.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { data, error } = await this.supabasePublic.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (error || !data.session || !data.user?.id) {
       throw new DomainException(
