@@ -21,8 +21,47 @@ describe('envValidationSchema', () => {
       DB_SSL: true,
       DB_LOGGING: false,
       CORS_ORIGINS: '',
+      PASSWORD_RESET_REDIRECT_URL: 'http://localhost:4200/auth/nueva-password',
     });
   });
+
+  it.each([
+    'http://localhost:4200/auth/nueva-password',
+    'https://app.pockit.finance/auth/nueva-password',
+    'capacitor://localhost/auth/nueva-password',
+    'pockit://auth/nueva-password',
+  ])(
+    'acepta esquemas permitidos para PASSWORD_RESET_REDIRECT_URL (%s)',
+    (redirectUrl) => {
+      const result = envValidationSchema.validate(
+        {
+          ...validEnv,
+          PASSWORD_RESET_REDIRECT_URL: redirectUrl,
+        },
+        { allowUnknown: true },
+      );
+
+      expect(result.error).toBeUndefined();
+      expect(result.value).toMatchObject({
+        PASSWORD_RESET_REDIRECT_URL: redirectUrl,
+      });
+    },
+  );
+
+  it.each(['not-a-uri', 'ftp://example.com/reset', ''])(
+    'falla si PASSWORD_RESET_REDIRECT_URL es inválida (%p)',
+    (invalidRedirectUrl) => {
+      const { error } = envValidationSchema.validate(
+        {
+          ...validEnv,
+          PASSWORD_RESET_REDIRECT_URL: invalidRedirectUrl,
+        },
+        { allowUnknown: true },
+      );
+
+      expect(error).toBeDefined();
+    },
+  );
 
   it('acepta valores booleanos en string para DB_SSL y DB_LOGGING', () => {
     const result = envValidationSchema.validate(
