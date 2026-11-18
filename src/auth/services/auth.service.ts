@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { CategoriasService } from '../../categorias/services/categorias.service';
 import { DomainException } from '../../common/exceptions/domain.exception';
@@ -7,11 +8,17 @@ import { UsuariosService } from '../../usuarios/services/usuarios.service';
 import {
   LoginRequest,
   LoginResponse,
+  MensajeResponse,
+  RecuperarPasswordRequest,
   RefreshTokenRequest,
   RefreshTokenResponse,
   RegistroRequest,
+  RestablecerPasswordRequest,
 } from '../dto';
 import { SupabaseAuthService } from './supabase-auth.service';
+
+const DEFAULT_PASSWORD_RESET_REDIRECT_URL =
+  'http://localhost:4200/auth/nueva-password';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +29,7 @@ export class AuthService {
     private readonly usuariosService: UsuariosService,
     private readonly categoriasService: CategoriasService,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   async registrar(dto: RegistroRequest): Promise<UsuarioResponse> {
@@ -104,5 +112,62 @@ export class AuthService {
     response.refreshToken = session.refreshToken;
     response.expiresIn = session.expiresIn;
     return response;
+  }
+
+  async recuperarPassword(
+    dto: RecuperarPasswordRequest,
+  ): Promise<MensajeResponse> {
+    const correoNormalizado = dto.correo.trim().toLowerCase();
+    const redirectTo = this.configService.get<string>(
+      'PASSWORD_RESET_REDIRECT_URL',
+      DEFAULT_PASSWORD_RESET_REDIRECT_URL,
+    );
+
+    await this.supabaseAuthService.resetPasswordForEmail(
+      correoNormalizado,
+      redirectTo,
+    );
+
+    const response = new MensajeResponse();
+    response.message =
+      'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.';
+    return response;
+  }
+
+  async restablecerPassword(
+    authorizationHeader: string | undefined,
+    dto: RestablecerPasswordRequest,
+  ): Promise<MensajeResponse> {
+    const token = this.extractBearerToken(authorizationHeader);
+
+    await this.supabaseAuthService.updatePasswordWithRecoveryToken(
+      token,
+      dto.password,
+    );
+
+    const response = new MensajeResponse();
+    response.message = 'Contraseña restablecida correctamente.';
+    return response;
+  }
+
+  private extractBearerToken(authorizationHeader?: string): string {
+    if (!authorizationHeader) {
+      throw new DomainException(
+        'TOKEN_RECUPERACION_INVALIDO',
+        'El token de recuperación es inválido o ha expirado.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const [scheme, token] = authorizationHeader.split(' ');
+    if (scheme !== 'Bearer' || !token?.trim()) {
+      throw new DomainException(
+        'TOKEN_RECUPERACION_INVALIDO',
+        'El token de recuperación es inválido o ha expirado.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    return token.trim();
   }
 }

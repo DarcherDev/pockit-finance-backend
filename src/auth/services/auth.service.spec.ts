@@ -1,4 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource, EntityManager } from 'typeorm';
 import { CategoriasService } from '../../categorias/services/categorias.service';
@@ -6,9 +7,12 @@ import { DomainException } from '../../common/exceptions/domain.exception';
 import { UsuarioResponse } from '../../usuarios/dto/response/usuario.response';
 import { UsuariosService } from '../../usuarios/services/usuarios.service';
 import { LoginRequest } from '../dto/request/login.request';
+import { RecuperarPasswordRequest } from '../dto/request/recuperar-password.request';
 import { RefreshTokenRequest } from '../dto/request/refresh-token.request';
 import { RegistroRequest } from '../dto/request/registro.request';
+import { RestablecerPasswordRequest } from '../dto/request/restablecer-password.request';
 import { LoginResponse } from '../dto/response/login.response';
+import { MensajeResponse } from '../dto/response/mensaje.response';
 import { RefreshTokenResponse } from '../dto/response/refresh-token.response';
 import { AuthService } from './auth.service';
 import { SupabaseAuthService } from './supabase-auth.service';
@@ -18,7 +22,12 @@ describe('AuthService', () => {
   let supabaseAuthService: jest.Mocked<
     Pick<
       SupabaseAuthService,
-      'createUser' | 'deleteUser' | 'signInWithPassword' | 'refreshSession'
+      | 'createUser'
+      | 'deleteUser'
+      | 'signInWithPassword'
+      | 'refreshSession'
+      | 'resetPasswordForEmail'
+      | 'updatePasswordWithRecoveryToken'
     >
   >;
   let usuariosService: jest.Mocked<
@@ -28,6 +37,7 @@ describe('AuthService', () => {
     Pick<CategoriasService, 'crearCategoriasSistema'>
   >;
   let dataSource: jest.Mocked<Pick<DataSource, 'transaction'>>;
+  let configService: jest.Mocked<Pick<ConfigService, 'get'>>;
   let managerMock: EntityManager;
 
   beforeEach(async () => {
@@ -38,6 +48,8 @@ describe('AuthService', () => {
       deleteUser: jest.fn(),
       signInWithPassword: jest.fn(),
       refreshSession: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      updatePasswordWithRecoveryToken: jest.fn(),
     };
 
     usuariosService = {
@@ -58,6 +70,12 @@ describe('AuthService', () => {
       >['transaction'],
     };
 
+    configService = {
+      get: jest
+        .fn()
+        .mockReturnValue('http://localhost:4200/auth/nueva-password'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -65,6 +83,7 @@ describe('AuthService', () => {
         { provide: UsuariosService, useValue: usuariosService },
         { provide: CategoriasService, useValue: categoriasService },
         { provide: DataSource, useValue: dataSource },
+        { provide: ConfigService, useValue: configService },
       ],
     }).compile();
 
@@ -264,5 +283,77 @@ describe('AuthService', () => {
         expiresIn: 3600,
       });
     });
+  });
+
+  describe('recuperarPassword', () => {
+    it('normaliza el correo, lee PASSWORD_RESET_REDIRECT_URL, invoca SupabaseAuthService y retorna mensaje neutro', async () => {
+      const dto = new RecuperarPasswordRequest();
+      dto.correo = '  Ana.Garcia@Pockit.Finance  ';
+
+      configService.get.mockReturnValue(
+        'https://app.pockit.finance/auth/nueva-password',
+      );
+      supabaseAuthService.resetPasswordForEmail.mockResolvedValue(undefined);
+
+      const result = await service.recuperarPassword(dto);
+
+      expect(configService.get).toHaveBeenCalledWith(
+        'PASSWORD_RESET_REDIRECT_URL',
+        'http://localhost:4200/auth/nueva-password',
+      );
+      expect(supabaseAuthService.resetPasswordForEmail).toHaveBeenCalledWith(
+        'ana.garcia@pockit.finance',
+        'https://app.pockit.finance/auth/nueva-password',
+      );
+      expect(result).toBeInstanceOf(MensajeResponse);
+      expect(result).toEqual({
+        message:
+          'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.',
+      });
+    });
+  });
+
+  describe('restablecerPassword', () => {
+    it('extrae el token Bearer y actualiza la contraseña retornando MensajeResponse', async () => {
+      const dto = new RestablecerPasswordRequest();
+      dto.password = 'NewPassword123';
+
+      supabaseAuthService.updatePasswordWithRecoveryToken.mockResolvedValue(
+        undefined,
+      );
+
+      const result = await service.restablecerPassword(
+        'Bearer valid-recovery-token',
+        dto,
+      );
+
+      expect(
+        supabaseAuthService.updatePasswordWithRecoveryToken,
+      ).toHaveBeenCalledWith('valid-recovery-token', 'NewPassword123');
+      expect(result).toBeInstanceOf(MensajeResponse);
+      expect(result).toEqual({
+        message: 'Contraseña restablecida correctamente.',
+      });
+    });
+
+    it.each([undefined, '', 'Token abc', 'Bearer ', 'Bearer   '])(
+      'lanza DomainException 401 TOKEN_RECUPERACION_INVALIDO cuando Authorization es inválido (%p)',
+      async (invalidHeader) => {
+        const dto = new RestablecerPasswordRequest();
+        dto.password = 'NewPassword123';
+
+        const promise = service.restablecerPassword(invalidHeader, dto);
+
+        await expect(promise).rejects.toBeInstanceOf(DomainException);
+        await expect(promise).rejects.toMatchObject({
+          code: 'TOKEN_RECUPERACION_INVALIDO',
+          message: 'El token de recuperación es inválido o ha expirado.',
+          status: HttpStatus.UNAUTHORIZED,
+        });
+        expect(
+          supabaseAuthService.updatePasswordWithRecoveryToken,
+        ).not.toHaveBeenCalled();
+      },
+    );
   });
 });
