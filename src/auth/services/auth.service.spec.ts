@@ -71,7 +71,9 @@ describe('AuthService', () => {
     };
 
     configService = {
-      get: jest.fn().mockReturnValue('http://localhost:4200/auth/nueva-password'),
+      get: jest
+        .fn()
+        .mockReturnValue('http://localhost:4200/auth/nueva-password'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
