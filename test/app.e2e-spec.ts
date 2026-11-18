@@ -128,6 +128,38 @@ describe('HU-01.1 Bootstrap & Health (e2e)', () => {
       },
     );
 
+    it('OPTIONS preflight desde capacitor://localhost devuelve métodos y headers CORS explícitos', async () => {
+      const response = await request(app.getHttpServer())
+        .options('/api/health')
+        .set('Origin', 'capacitor://localhost')
+        .set('Access-Control-Request-Method', 'PATCH')
+        .set(
+          'Access-Control-Request-Headers',
+          'Authorization, Content-Type, Accept',
+        )
+        .expect(204);
+
+      expect(response.headers['access-control-allow-origin']).toBe(
+        'capacitor://localhost',
+      );
+      expect(response.headers['access-control-allow-methods']).toBe(
+        'GET,POST,PATCH,DELETE,OPTIONS',
+      );
+      expect(response.headers['access-control-allow-headers']).toBe(
+        'Authorization,Content-Type,Accept',
+      );
+    });
+
+    it('OPTIONS preflight desde origen no permitido rechaza CORS sin romper el servidor', async () => {
+      const response = await request(app.getHttpServer())
+        .options('/api/health')
+        .set('Origin', 'https://evil.example.com')
+        .set('Access-Control-Request-Method', 'POST');
+
+      expect(response.status).toBeLessThan(500);
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
+    });
+
     it('CORS no autoriza orígenes no permitidos', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/health')
