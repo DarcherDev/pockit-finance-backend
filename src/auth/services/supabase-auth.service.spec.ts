@@ -14,10 +14,13 @@ describe('SupabaseAuthService', () => {
   let adminMock: {
     createUser: jest.Mock;
     deleteUser: jest.Mock;
+    updateUserById: jest.Mock;
   };
   let publicAuthMock: {
     signInWithPassword: jest.Mock;
     refreshSession: jest.Mock;
+    resetPasswordForEmail: jest.Mock;
+    getUser: jest.Mock;
   };
   let configServiceMock: {
     getOrThrow: jest.Mock;
@@ -27,10 +30,13 @@ describe('SupabaseAuthService', () => {
     adminMock = {
       createUser: jest.fn(),
       deleteUser: jest.fn(),
+      updateUserById: jest.fn(),
     };
     publicAuthMock = {
       signInWithPassword: jest.fn(),
       refreshSession: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      getUser: jest.fn(),
     };
 
     (createClient as jest.Mock).mockImplementation(
@@ -349,6 +355,152 @@ describe('SupabaseAuthService', () => {
         code: 'TOKEN_REFRESH_INVALIDO',
         message: 'El token de renovación es inválido o ha expirado.',
         status: HttpStatus.UNAUTHORIZED,
+      });
+    });
+  });
+
+  describe('resetPasswordForEmail', () => {
+    it('invoca resetPasswordForEmail en el cliente público con redirectTo y resuelve sin revelar existencia', async () => {
+      publicAuthMock.resetPasswordForEmail.mockResolvedValue({
+        data: {},
+        error: null,
+      });
+
+      await expect(
+        service.resetPasswordForEmail(
+          'ana@pockit.finance',
+          'http://localhost:4200/auth/nueva-password',
+        ),
+      ).resolves.toBeUndefined();
+
+      expect(publicAuthMock.resetPasswordForEmail).toHaveBeenCalledWith(
+        'ana@pockit.finance',
+        { redirectTo: 'http://localhost:4200/auth/nueva-password' },
+      );
+    });
+
+    it('no filtra ni lanza error cuando Supabase responde error (correo no encontrado o rate limit)', async () => {
+      publicAuthMock.resetPasswordForEmail.mockResolvedValue({
+        data: null,
+        error: {
+          message: 'User not found',
+          status: 400,
+        },
+      });
+
+      await expect(
+        service.resetPasswordForEmail(
+          'noexiste@pockit.finance',
+          'http://localhost:4200/auth/nueva-password',
+        ),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('updatePasswordWithRecoveryToken', () => {
+    it('valida el token con getUser y actualiza la contraseña con admin.updateUserById', async () => {
+      publicAuthMock.getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            email: 'ana@pockit.finance',
+          },
+        },
+        error: null,
+      });
+      adminMock.updateUserById.mockResolvedValue({
+        data: {
+          user: {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+          },
+        },
+        error: null,
+      });
+
+      await expect(
+        service.updatePasswordWithRecoveryToken(
+          'valid-recovery-token',
+          'NewPassword123',
+        ),
+      ).resolves.toBeUndefined();
+
+      expect(publicAuthMock.getUser).toHaveBeenCalledWith(
+        'valid-recovery-token',
+      );
+      expect(adminMock.updateUserById).toHaveBeenCalledWith(
+        '550e8400-e29b-41d4-a716-446655440000',
+        { password: 'NewPassword123' },
+      );
+    });
+
+    it('lanza DomainException 401 TOKEN_RECUPERACION_INVALIDO cuando getUser retorna error (token expirado o inválido)', async () => {
+      publicAuthMock.getUser.mockResolvedValue({
+        data: { user: null },
+        error: {
+          message: 'invalid claim: missing sub claim',
+          status: 401,
+        },
+      });
+
+      const promise = service.updatePasswordWithRecoveryToken(
+        'expired-token',
+        'NewPassword123',
+      );
+
+      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toMatchObject({
+        code: 'TOKEN_RECUPERACION_INVALIDO',
+        message: 'El token de recuperación es inválido o ha expirado.',
+        status: HttpStatus.UNAUTHORIZED,
+      });
+      expect(adminMock.updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('lanza DomainException 401 TOKEN_RECUPERACION_INVALIDO cuando getUser no retorna usuario', async () => {
+      publicAuthMock.getUser.mockResolvedValue({
+        data: { user: null },
+        error: null,
+      });
+
+      await expect(
+        service.updatePasswordWithRecoveryToken(
+          'used-or-empty-token',
+          'NewPassword123',
+        ),
+      ).rejects.toMatchObject({
+        code: 'TOKEN_RECUPERACION_INVALIDO',
+        message: 'El token de recuperación es inválido o ha expirado.',
+        status: HttpStatus.UNAUTHORIZED,
+      });
+      expect(adminMock.updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('lanza DomainException 502 AUTH_PROVIDER_ERROR cuando admin.updateUserById falla', async () => {
+      publicAuthMock.getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+          },
+        },
+        error: null,
+      });
+      adminMock.updateUserById.mockResolvedValue({
+        data: { user: null },
+        error: {
+          message: 'Database error updating user',
+          status: 500,
+        },
+      });
+
+      const promise = service.updatePasswordWithRecoveryToken(
+        'valid-recovery-token',
+        'NewPassword123',
+      );
+
+      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toMatchObject({
+        code: 'AUTH_PROVIDER_ERROR',
+        status: HttpStatus.BAD_GATEWAY,
       });
     });
   });

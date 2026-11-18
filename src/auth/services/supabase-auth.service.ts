@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
 import { DomainException } from '../../common/exceptions/domain.exception';
@@ -28,6 +28,7 @@ export interface SupabaseRefreshedSession {
 
 @Injectable()
 export class SupabaseAuthService {
+  private readonly logger = new Logger(SupabaseAuthService.name);
   private readonly supabase: ReturnType<typeof createClient>;
   private readonly supabasePublic: ReturnType<typeof createClient>;
 
@@ -153,5 +154,58 @@ export class SupabaseAuthService {
       refreshToken: data.session.refresh_token,
       expiresIn: data.session.expires_in,
     };
+  }
+
+  async resetPasswordForEmail(
+    email: string,
+    redirectTo: string,
+  ): Promise<void> {
+    const { error } = await this.supabasePublic.auth.resetPasswordForEmail(
+      email,
+      { redirectTo },
+    );
+
+    if (error) {
+      this.logger.warn(
+        `resetPasswordForEmail devolvió error de proveedor (status=${error.status ?? 'unknown'})`,
+      );
+    }
+  }
+
+  async updatePasswordWithRecoveryToken(
+    accessToken: string,
+    newPassword: string,
+  ): Promise<void> {
+    const { data, error } = await this.supabasePublic.auth.getUser(accessToken);
+
+    if (error || !data.user?.id) {
+      throw new DomainException(
+        'TOKEN_RECUPERACION_INVALIDO',
+        'El token de recuperación es inválido o ha expirado.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const { error: updateError } =
+      await this.supabase.auth.admin.updateUserById(data.user.id, {
+        password: newPassword,
+      });
+
+    if (updateError) {
+      if (updateError.status === 401) {
+        throw new DomainException(
+          'TOKEN_RECUPERACION_INVALIDO',
+          'El token de recuperación es inválido o ha expirado.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      throw new DomainException(
+        'AUTH_PROVIDER_ERROR',
+        'No se pudo actualizar la contraseña en el proveedor de autenticación',
+        HttpStatus.BAD_GATEWAY,
+        { reason: updateError.message },
+      );
+    }
   }
 }
