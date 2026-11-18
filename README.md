@@ -54,6 +54,23 @@ npm run build
 npm run start:prod
 ```
 
+## Despliegue Continuo (Render / Railway / Docker)
+
+```bash
+# 1. Compilar la aplicación
+npm run build
+
+# 2. Ejecutar migraciones pendientes contra la base de datos en producción
+npm run migration:run:prod
+
+# 3. Iniciar el servidor compilado
+npm run start:prod
+```
+
+- **Healthcheck HTTP:** `GET /api/health` (responde `200 OK` con `{ "status": "ok", "database": "up" }`, o `503` si falla la conexión a PostgreSQL).
+- **Imagen Docker:** `Dockerfile` multi-stage (`builder` + `production` sobre `node:22-alpine`) con `HEALTHCHECK` integrado hacia `/api/health`.
+- **Procfile:** Define el proceso `web: npm run start:prod` para plataformas PaaS.
+
 ## Pruebas y Calidad
 
 ```bash
