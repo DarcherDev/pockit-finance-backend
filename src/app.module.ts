@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { SupabaseJwtGuard } from './auth/guards/supabase-jwt.guard';
+import { CategoriasModule } from './categorias/categorias.module';
 import { getDatabaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
 import { HealthModule } from './health/health.module';
@@ -21,6 +22,7 @@ import { HealthModule } from './health/health.module';
       useFactory: getDatabaseConfig,
     }),
     AuthModule,
+    CategoriasModule,
     HealthModule,
   ],
   controllers: [AppController],
