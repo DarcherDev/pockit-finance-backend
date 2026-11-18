@@ -28,17 +28,21 @@ describe('configureApp & parseCorsOrigins', () => {
   });
 
   it('configura prefijo /api, CORS, ValidationPipe y AllExceptionsFilter en INestApplication', () => {
+    const setGlobalPrefix = jest.fn();
+    const enableCors = jest.fn();
+    const useGlobalPipes = jest.fn();
+    const useGlobalFilters = jest.fn();
     const app = {
-      setGlobalPrefix: jest.fn(),
-      enableCors: jest.fn(),
-      useGlobalPipes: jest.fn(),
-      useGlobalFilters: jest.fn(),
+      setGlobalPrefix,
+      enableCors,
+      useGlobalPipes,
+      useGlobalFilters,
     } as unknown as INestApplication;
 
     configureApp(app, 'https://app.pockit.finance');
 
-    expect(app.setGlobalPrefix).toHaveBeenCalledWith('api');
-    expect(app.enableCors).toHaveBeenCalledWith({
+    expect(setGlobalPrefix).toHaveBeenCalledWith('api');
+    expect(enableCors).toHaveBeenCalledWith({
       origin: [
         'capacitor://localhost',
         'https://localhost',
@@ -47,8 +51,8 @@ describe('configureApp & parseCorsOrigins', () => {
       ],
       credentials: true,
     });
-    expect(app.useGlobalPipes).toHaveBeenCalledWith(expect.any(ValidationPipe));
-    expect(app.useGlobalFilters).toHaveBeenCalledWith(
+    expect(useGlobalPipes).toHaveBeenCalledWith(expect.any(ValidationPipe));
+    expect(useGlobalFilters).toHaveBeenCalledWith(
       expect.any(AllExceptionsFilter),
     );
   });

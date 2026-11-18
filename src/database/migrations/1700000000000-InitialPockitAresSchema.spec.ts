@@ -46,7 +46,9 @@ describe('InitialPockitAresSchema1700000000000', () => {
       expect(fullSql).toContain(`CREATE TABLE ${tableName}`);
     }
 
-    expect(fullSql).toContain('CREATE TABLE IF NOT EXISTS public.esquema_versiones');
+    expect(fullSql).toContain(
+      'CREATE TABLE IF NOT EXISTS public.esquema_versiones',
+    );
     expect(fullSql).toContain('INSERT INTO public.esquema_versiones');
   });
 
@@ -61,7 +63,9 @@ describe('InitialPockitAresSchema1700000000000', () => {
     expect(fullSql).not.toMatch(/\bBEGIN\b/i);
     expect(fullSql).not.toMatch(/\bCOMMIT\b/i);
 
-    expect(fullSql).toContain('DROP TABLE IF EXISTS public.transaccion_etiquetas');
+    expect(fullSql).toContain(
+      'DROP TABLE IF EXISTS public.transaccion_etiquetas',
+    );
     expect(fullSql).toContain('DROP TABLE IF EXISTS public.transacciones');
     expect(fullSql).toContain('DROP TABLE IF EXISTS public.series');
     expect(fullSql).toContain('DROP TABLE IF EXISTS public.etiquetas');

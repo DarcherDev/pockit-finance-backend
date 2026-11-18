@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InitialPockitAresSchema1700000000000
-  implements MigrationInterface
-{
+export class InitialPockitAresSchema1700000000000 implements MigrationInterface {
   name = 'InitialPockitAresSchema1700000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -243,7 +241,9 @@ export class InitialPockitAresSchema1700000000000
     await queryRunner.query(
       `DROP INDEX IF EXISTS public.uq_cat_usr_nombre_naturaleza;`,
     );
-    await queryRunner.query(`DROP INDEX IF EXISTS public.idx_cta_cta_padre_id;`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS public.idx_cta_cta_padre_id;`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS public.idx_cta_usr_id;`);
 
     await queryRunner.query(

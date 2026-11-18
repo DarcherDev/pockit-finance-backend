@@ -6,23 +6,26 @@ describe('envValidationSchema', () => {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
     SUPABASE_SECRET_KEY: 'sb_secret_test',
-    SUPABASE_JWKS_URL: 'https://example.supabase.co/auth/v1/.well-known/jwks.json',
+    SUPABASE_JWKS_URL:
+      'https://example.supabase.co/auth/v1/.well-known/jwks.json',
   };
 
   it('valida correctamente cuando están todas las variables obligatorias y aplica defaults', () => {
-    const { error, value } = envValidationSchema.validate(validEnv, {
+    const result = envValidationSchema.validate(validEnv, {
       allowUnknown: true,
     });
 
-    expect(error).toBeUndefined();
-    expect(value.PORT).toBe(3000);
-    expect(value.DB_SSL).toBe(true);
-    expect(value.DB_LOGGING).toBe(false);
-    expect(value.CORS_ORIGINS).toBe('');
+    expect(result.error).toBeUndefined();
+    expect(result.value).toMatchObject({
+      PORT: 3000,
+      DB_SSL: true,
+      DB_LOGGING: false,
+      CORS_ORIGINS: '',
+    });
   });
 
   it('acepta valores booleanos en string para DB_SSL y DB_LOGGING', () => {
-    const { error, value } = envValidationSchema.validate(
+    const result = envValidationSchema.validate(
       {
         ...validEnv,
         PORT: '4000',
@@ -33,13 +36,13 @@ describe('envValidationSchema', () => {
       { allowUnknown: true },
     );
 
-    expect(error).toBeUndefined();
-    expect(value.PORT).toBe(4000);
-    expect(value.DB_SSL).toBe(false);
-    expect(value.DB_LOGGING).toBe(true);
-    expect(value.CORS_ORIGINS).toBe(
-      'https://app.pockit.finance,http://localhost:5173',
-    );
+    expect(result.error).toBeUndefined();
+    expect(result.value).toMatchObject({
+      PORT: 4000,
+      DB_SSL: false,
+      DB_LOGGING: true,
+      CORS_ORIGINS: 'https://app.pockit.finance,http://localhost:5173',
+    });
   });
 
   it.each([
