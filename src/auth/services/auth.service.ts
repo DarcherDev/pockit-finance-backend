@@ -4,7 +4,13 @@ import { CategoriasService } from '../../categorias/services/categorias.service'
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { UsuarioResponse } from '../../usuarios/dto/response/usuario.response';
 import { UsuariosService } from '../../usuarios/services/usuarios.service';
-import { RegistroRequest } from '../dto/request/registro.request';
+import {
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
+  RegistroRequest,
+} from '../dto';
 import { SupabaseAuthService } from './supabase-auth.service';
 
 @Injectable()
@@ -70,5 +76,33 @@ export class AuthService {
 
       throw error;
     }
+  }
+
+  async login(dto: LoginRequest): Promise<LoginResponse> {
+    const correoNormalizado = dto.correo.trim().toLowerCase();
+    const session = await this.supabaseAuthService.signInWithPassword(
+      correoNormalizado,
+      dto.password,
+    );
+    const usuario = await this.usuariosService.obtenerPerfil(session.userId);
+
+    const response = new LoginResponse();
+    response.accessToken = session.accessToken;
+    response.refreshToken = session.refreshToken;
+    response.expiresIn = session.expiresIn;
+    response.usuario = usuario;
+    return response;
+  }
+
+  async refresh(dto: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    const session = await this.supabaseAuthService.refreshSession(
+      dto.refreshToken,
+    );
+
+    const response = new RefreshTokenResponse();
+    response.accessToken = session.accessToken;
+    response.refreshToken = session.refreshToken;
+    response.expiresIn = session.expiresIn;
+    return response;
   }
 }

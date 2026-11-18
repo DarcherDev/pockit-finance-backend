@@ -4,17 +4,27 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsuarioResponse } from '../../usuarios/dto/response/usuario.response';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { RegistroRequest } from '../dto/request/registro.request';
+import {
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
+  RegistroRequest,
+} from '../dto';
 import { AuthService } from '../services/auth.service';
 import { AuthController } from './auth.controller';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: jest.Mocked<Pick<AuthService, 'registrar'>>;
+  let authService: jest.Mocked<
+    Pick<AuthService, 'registrar' | 'login' | 'refresh'>
+  >;
 
   beforeEach(async () => {
     authService = {
       registrar: jest.fn(),
+      login: jest.fn(),
+      refresh: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -72,6 +82,86 @@ describe('AuthController', () => {
     const result = await controller.registrar(dto);
 
     expect(authService.registrar).toHaveBeenCalledWith(dto);
+    expect(result).toBe(expected);
+  });
+
+  it('marca el endpoint login como @Public() y con HTTP 200 OK', () => {
+    const reflector = new Reflector();
+    const loginTarget = Object.getOwnPropertyDescriptor(
+      AuthController.prototype,
+      'login',
+    )?.value as object;
+
+    const isPublic = reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      loginTarget,
+      AuthController,
+    ]);
+    const httpCode = Reflect.getMetadata(
+      HTTP_CODE_METADATA,
+      loginTarget,
+    ) as number;
+
+    expect(isPublic).toBe(true);
+    expect(httpCode).toBe(HttpStatus.OK);
+  });
+
+  it('login delega en AuthService y retorna LoginResponse', async () => {
+    const dto = new LoginRequest();
+    dto.correo = 'ana@pockit.finance';
+    dto.password = 'Password123';
+
+    const usuario = new UsuarioResponse();
+    usuario.usrId = '550e8400-e29b-41d4-a716-446655440000';
+    usuario.usrCorreo = 'ana@pockit.finance';
+
+    const expected = new LoginResponse();
+    expected.accessToken = 'jwt-access-token';
+    expected.refreshToken = 'jwt-refresh-token';
+    expected.expiresIn = 3600;
+    expected.usuario = usuario;
+
+    authService.login.mockResolvedValue(expected);
+
+    const result = await controller.login(dto);
+
+    expect(authService.login).toHaveBeenCalledWith(dto);
+    expect(result).toBe(expected);
+  });
+
+  it('marca el endpoint refresh como @Public() y con HTTP 200 OK', () => {
+    const reflector = new Reflector();
+    const refreshTarget = Object.getOwnPropertyDescriptor(
+      AuthController.prototype,
+      'refresh',
+    )?.value as object;
+
+    const isPublic = reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      refreshTarget,
+      AuthController,
+    ]);
+    const httpCode = Reflect.getMetadata(
+      HTTP_CODE_METADATA,
+      refreshTarget,
+    ) as number;
+
+    expect(isPublic).toBe(true);
+    expect(httpCode).toBe(HttpStatus.OK);
+  });
+
+  it('refresh delega en AuthService y retorna RefreshTokenResponse', async () => {
+    const dto = new RefreshTokenRequest();
+    dto.refreshToken = 'valid-refresh-token';
+
+    const expected = new RefreshTokenResponse();
+    expected.accessToken = 'new-access-token';
+    expected.refreshToken = 'new-refresh-token';
+    expected.expiresIn = 3600;
+
+    authService.refresh.mockResolvedValue(expected);
+
+    const result = await controller.refresh(dto);
+
+    expect(authService.refresh).toHaveBeenCalledWith(dto);
     expect(result).toBe(expected);
   });
 });
