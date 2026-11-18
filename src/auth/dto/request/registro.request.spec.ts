@@ -16,7 +16,7 @@ describe('RegistroRequest', () => {
     edad: 28,
   };
 
-  it('acepta un payload válido', async () => {
+  it('acepta un payload válido y edades en los límites 0 y 130', async () => {
     const result: unknown = await pipe.transform(validPayload, {
       type: 'body',
       metatype: RegistroRequest,
@@ -24,6 +24,20 @@ describe('RegistroRequest', () => {
 
     expect(result).toBeInstanceOf(RegistroRequest);
     expect(result).toEqual(validPayload);
+
+    await expect(
+      pipe.transform(
+        { ...validPayload, edad: 0 },
+        { type: 'body', metatype: RegistroRequest },
+      ),
+    ).resolves.toMatchObject({ edad: 0 });
+
+    await expect(
+      pipe.transform(
+        { ...validPayload, edad: 130 },
+        { type: 'body', metatype: RegistroRequest },
+      ),
+    ).resolves.toMatchObject({ edad: 130 });
   });
 
   it('rechaza correo inválido', async () => {

@@ -191,4 +191,48 @@ describe('HU-02.1 Registro de Usuario (e2e)', () => {
     });
     expect(supabaseAuthMock.createUser).not.toHaveBeenCalled();
   });
+
+  it('POST /api/auth/registro invoca deleteUser (compensación) si falla la transacción SQL y no expone detalles internos', async () => {
+    const createdUsuario = new UsuarioResponse();
+    createdUsuario.usrId = REGISTERED_USER_ID;
+    createdUsuario.usrCorreo = 'ana@pockit.finance';
+    createdUsuario.usrNombre = 'Ana';
+    createdUsuario.usrApellido = 'García';
+    createdUsuario.usrEdad = 28;
+    createdUsuario.usrCreadoEn = '2026-11-17T10:00:00.000Z';
+    createdUsuario.usrActualizadoEn = '2026-11-17T10:00:00.000Z';
+
+    usuariosServiceMock.findByCorreo.mockResolvedValue(null);
+    supabaseAuthMock.createUser.mockResolvedValue({
+      id: REGISTERED_USER_ID,
+      email: 'ana@pockit.finance',
+    });
+    usuariosServiceMock.create.mockResolvedValue(createdUsuario);
+    categoriasServiceMock.crearCategoriasSistema.mockRejectedValue(
+      new Error('SQL_SENSITIVE_FAILURE_DO_NOT_LEAK'),
+    );
+    supabaseAuthMock.deleteUser.mockResolvedValue(undefined);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/registro')
+      .send({
+        correo: 'ana@pockit.finance',
+        password: 'Password123',
+        nombre: 'Ana',
+        apellido: 'García',
+        edad: 28,
+      })
+      .expect(500);
+
+    expect(supabaseAuthMock.deleteUser).toHaveBeenCalledWith(
+      REGISTERED_USER_ID,
+    );
+    expect(response.body).toMatchObject({
+      statusCode: 500,
+      code: 'INTERNAL_SERVER_ERROR',
+    });
+    expect(JSON.stringify(response.body)).not.toContain(
+      'SQL_SENSITIVE_FAILURE_DO_NOT_LEAK',
+    );
+  });
 });
