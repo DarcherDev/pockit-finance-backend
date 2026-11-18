@@ -15,6 +15,10 @@ describe('SupabaseAuthService', () => {
     createUser: jest.Mock;
     deleteUser: jest.Mock;
   };
+  let publicAuthMock: {
+    signInWithPassword: jest.Mock;
+    refreshSession: jest.Mock;
+  };
   let configServiceMock: {
     getOrThrow: jest.Mock;
   };
@@ -24,12 +28,26 @@ describe('SupabaseAuthService', () => {
       createUser: jest.fn(),
       deleteUser: jest.fn(),
     };
+    publicAuthMock = {
+      signInWithPassword: jest.fn(),
+      refreshSession: jest.fn(),
+    };
 
-    (createClient as jest.Mock).mockReturnValue({
-      auth: {
-        admin: adminMock,
+    (createClient as jest.Mock).mockImplementation(
+      (_url: string, key: string) => {
+        if (key === 'sb_secret_test_key') {
+          return {
+            auth: {
+              admin: adminMock,
+            },
+          };
+        }
+
+        return {
+          auth: publicAuthMock,
+        };
       },
-    });
+    );
 
     configServiceMock = {
       getOrThrow: jest.fn((key: string) => {
@@ -38,6 +56,9 @@ describe('SupabaseAuthService', () => {
         }
         if (key === 'SUPABASE_SECRET_KEY') {
           return 'sb_secret_test_key';
+        }
+        if (key === 'SUPABASE_PUBLISHABLE_KEY') {
+          return 'sb_publishable_test_key';
         }
         throw new Error(`Unexpected config key: ${key}`);
       }),
@@ -60,10 +81,20 @@ describe('SupabaseAuthService', () => {
     jest.clearAllMocks();
   });
 
-  it('inicializa el cliente de Supabase con autoRefreshToken y persistSession en false', () => {
+  it('inicializa los clientes admin y público de Supabase con autoRefreshToken y persistSession en false', () => {
     expect(createClient).toHaveBeenCalledWith(
       'https://test-project.supabase.co',
       'sb_secret_test_key',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+    expect(createClient).toHaveBeenCalledWith(
+      'https://test-project.supabase.co',
+      'sb_publishable_test_key',
       {
         auth: {
           autoRefreshToken: false,
@@ -186,6 +217,138 @@ describe('SupabaseAuthService', () => {
       ).rejects.toMatchObject({
         code: 'AUTH_PROVIDER_ERROR',
         status: HttpStatus.BAD_GATEWAY,
+      });
+    });
+  });
+
+  describe('signInWithPassword', () => {
+    it('autentica con el cliente público y retorna userId, accessToken, refreshToken y expiresIn', async () => {
+      publicAuthMock.signInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            email: 'ana@pockit.finance',
+          },
+          session: {
+            access_token: 'jwt-access-token',
+            refresh_token: 'jwt-refresh-token',
+            expires_in: 3600,
+          },
+        },
+        error: null,
+      });
+
+      const result = await service.signInWithPassword(
+        'ana@pockit.finance',
+        'Password123',
+      );
+
+      expect(publicAuthMock.signInWithPassword).toHaveBeenCalledWith({
+        email: 'ana@pockit.finance',
+        password: 'Password123',
+      });
+      expect(result).toEqual({
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        accessToken: 'jwt-access-token',
+        refreshToken: 'jwt-refresh-token',
+        expiresIn: 3600,
+      });
+    });
+
+    it('lanza DomainException 401 CREDENCIALES_INVALIDAS ante error de credenciales o email no confirmado', async () => {
+      publicAuthMock.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: {
+          message: 'Email not confirmed',
+          status: 400,
+        },
+      });
+
+      const promise = service.signInWithPassword(
+        'ana@pockit.finance',
+        'WrongPass',
+      );
+
+      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toMatchObject({
+        code: 'CREDENCIALES_INVALIDAS',
+        message: 'Credenciales inválidas.',
+        status: HttpStatus.UNAUTHORIZED,
+      });
+    });
+
+    it('lanza DomainException 401 CREDENCIALES_INVALIDAS si no retorna sesión o usuario', async () => {
+      publicAuthMock.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: null,
+      });
+
+      await expect(
+        service.signInWithPassword('ana@pockit.finance', 'Password123'),
+      ).rejects.toMatchObject({
+        code: 'CREDENCIALES_INVALIDAS',
+        message: 'Credenciales inválidas.',
+        status: HttpStatus.UNAUTHORIZED,
+      });
+    });
+  });
+
+  describe('refreshSession', () => {
+    it('renueva la sesión con el cliente público y retorna accessToken, refreshToken y expiresIn', async () => {
+      publicAuthMock.refreshSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 3600,
+          },
+        },
+        error: null,
+      });
+
+      const result = await service.refreshSession('old-refresh-token');
+
+      expect(publicAuthMock.refreshSession).toHaveBeenCalledWith({
+        refresh_token: 'old-refresh-token',
+      });
+      expect(result).toEqual({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+        expiresIn: 3600,
+      });
+    });
+
+    it('lanza DomainException 401 TOKEN_REFRESH_INVALIDO cuando el refresh token es inválido o expiró', async () => {
+      publicAuthMock.refreshSession.mockResolvedValue({
+        data: { session: null },
+        error: {
+          message: 'Invalid Refresh Token: Refresh Token Not Found',
+          status: 400,
+        },
+      });
+
+      const promise = service.refreshSession('expired-refresh-token');
+
+      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toMatchObject({
+        code: 'TOKEN_REFRESH_INVALIDO',
+        message: 'El token de renovación es inválido o ha expirado.',
+        status: HttpStatus.UNAUTHORIZED,
+      });
+    });
+
+    it('lanza DomainException 401 TOKEN_REFRESH_INVALIDO cuando Supabase no retorna sesión', async () => {
+      publicAuthMock.refreshSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      });
+
+      await expect(
+        service.refreshSession('missing-session-token'),
+      ).rejects.toMatchObject({
+        code: 'TOKEN_REFRESH_INVALIDO',
+        message: 'El token de renovación es inválido o ha expirado.',
+        status: HttpStatus.UNAUTHORIZED,
       });
     });
   });

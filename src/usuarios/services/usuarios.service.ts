@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { DomainException } from '../../common/exceptions/domain.exception';
 import { UsuarioResponse } from '../dto/response/usuario.response';
 import { UsuariosMapper } from '../mapper/usuarios.mapper';
 import {
@@ -40,6 +41,19 @@ export class UsuariosService {
     manager?: EntityManager,
   ): Promise<UsuarioResponse> {
     const entity = await this.usuariosRepository.create(data, manager);
+    return this.usuariosMapper.toResponse(entity);
+  }
+
+  async obtenerPerfil(usrId: string): Promise<UsuarioResponse> {
+    const entity = await this.usuariosRepository.findById(usrId);
+    if (!entity) {
+      throw new DomainException(
+        'USUARIO_NO_ENCONTRADO',
+        'Usuario no encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
     return this.usuariosMapper.toResponse(entity);
   }
 }
