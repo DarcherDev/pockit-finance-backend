@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { getDatabaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { envValidationSchema } from './config/env.validation';
       inject: [ConfigService],
       useFactory: getDatabaseConfig,
     }),
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
