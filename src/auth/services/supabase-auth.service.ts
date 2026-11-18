@@ -13,22 +13,46 @@ export interface SupabaseAuthUser {
   email: string;
 }
 
+export interface SupabaseAuthSession {
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+export interface SupabaseRefreshedSession {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
 @Injectable()
 export class SupabaseAuthService {
   private readonly supabase: ReturnType<typeof createClient>;
+  private readonly supabasePublic: ReturnType<typeof createClient>;
 
   constructor(private readonly configService: ConfigService) {
     const supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
     const supabaseSecretKey = this.configService.getOrThrow<string>(
       'SUPABASE_SECRET_KEY',
     );
+    const supabasePublishableKey = this.configService.getOrThrow<string>(
+      'SUPABASE_PUBLISHABLE_KEY',
+    );
 
-    this.supabase = createClient(supabaseUrl, supabaseSecretKey, {
+    const clientOptions = {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
-    });
+    };
+
+    this.supabase = createClient(supabaseUrl, supabaseSecretKey, clientOptions);
+    this.supabasePublic = createClient(
+      supabaseUrl,
+      supabasePublishableKey,
+      clientOptions,
+    );
   }
 
   async createUser(
@@ -82,5 +106,53 @@ export class SupabaseAuthService {
         { reason: error.message },
       );
     }
+  }
+
+  async signInWithPassword(
+    email: string,
+    password: string,
+  ): Promise<SupabaseAuthSession> {
+    const { data, error } =
+      await this.supabasePublic.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+    if (error || !data.session || !data.user?.id) {
+      throw new DomainException(
+        'CREDENCIALES_INVALIDAS',
+        'Credenciales inválidas.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    return {
+      userId: data.user.id,
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresIn: data.session.expires_in,
+    };
+  }
+
+  async refreshSession(
+    refreshToken: string,
+  ): Promise<SupabaseRefreshedSession> {
+    const { data, error } = await this.supabasePublic.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session) {
+      throw new DomainException(
+        'TOKEN_REFRESH_INVALIDO',
+        'El token de renovación es inválido o ha expirado.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    return {
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresIn: data.session.expires_in,
+    };
   }
 }
