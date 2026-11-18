@@ -8,9 +8,10 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 export const getDatabaseConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
-  const isSslEnabled = configService.get<string>('DB_SSL', 'true') === 'true';
-  const isLoggingEnabled =
-    configService.get<string>('DB_LOGGING', 'false') === 'true';
+  const rawSsl = configService.get<boolean | string>('DB_SSL', true);
+  const isSslEnabled = rawSsl === true || rawSsl === 'true';
+  const rawLogging = configService.get<boolean | string>('DB_LOGGING', false);
+  const isLoggingEnabled = rawLogging === true || rawLogging === 'true';
 
   return {
     type: 'postgres',
