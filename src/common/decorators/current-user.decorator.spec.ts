@@ -7,14 +7,19 @@ function getParamDecoratorFactory(
   decorator: () => ParameterDecorator,
 ): (data: unknown, ctx: ExecutionContext) => unknown {
   class TestController {
-    test(@decorator() _user: unknown): void {}
+    test(@decorator() user: unknown): unknown {
+      return user;
+    }
   }
 
   const metadata = Reflect.getMetadata(
     ROUTE_ARGS_METADATA,
     TestController,
     'test',
-  ) as Record<string, { factory: (data: unknown, ctx: ExecutionContext) => unknown }>;
+  ) as Record<
+    string,
+    { factory: (data: unknown, ctx: ExecutionContext) => unknown }
+  >;
 
   const key = Object.keys(metadata)[0];
   return metadata[key].factory;
