@@ -336,4 +336,136 @@ describe('HU-03.1 Creación y Listado Jerárquico de Cuentas Principales (e2e)',
     expect(body[0].subcuentas).toHaveLength(1);
     expect(body[0].subcuentas[0].ctaNombre).toBe('Bolsillo Vacaciones');
   });
+
+  it('5. ValidationPipe rechaza propiedades no declaradas (forbidNonWhitelisted) y query incluirInactivas inválido', async () => {
+    const token = signToken(USER_1_ID, 'ana@pockit.finance');
+
+    const resExtraBody = await request(app.getHttpServer())
+      .post('/api/cuentas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ctaNombre: 'Nequi',
+        ctaNaturaleza: 'BILLETERA',
+        ctaColor: '#7C3AED',
+        ctaIcono: 'wallet',
+        ctaCtaPadreId: '00000000-0000-4000-8000-000000000099',
+      })
+      .expect(400);
+
+    expect(resExtraBody.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+
+    const resExtraQuery = await request(app.getHttpServer())
+      .get('/api/cuentas?campoInvalido=true')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(resExtraQuery.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+
+    const resInvalidBool = await request(app.getHttpServer())
+      .get('/api/cuentas?incluirInactivas=abc')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(resInvalidBool.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('6. POST /api/cuentas sin ctaSaldoInicial asigna 0 y GET ?incluirInactivas=true incluye inactivas sin sumarlas en saldoSubcuentas', async () => {
+    const token = signToken(USER_1_ID, 'ana@pockit.finance');
+
+    const createRes = await request(app.getHttpServer())
+      .post('/api/cuentas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ctaNombre: 'Nequi Personal',
+        ctaNaturaleza: 'BILLETERA',
+        ctaColor: '#7C3AED',
+        ctaIcono: 'wallet',
+      })
+      .expect(201);
+
+    expect(createRes.body).toMatchObject({
+      ctaSaldoInicial: 0,
+      ctaSaldoActual: 0,
+      ctaCtaPadreId: null,
+      ctaActiva: true,
+    });
+
+    const padreId = (createRes.body as { ctaId: string }).ctaId;
+
+    store.push(
+      {
+        ctaId: '00000000-0000-4000-8000-000000000101',
+        ctaUsrId: USER_1_ID,
+        ctaCtaPadreId: padreId,
+        ctaNaturaleza: null,
+        ctaNombre: 'Bolsillo Activo',
+        ctaSaldoInicial: 10.15,
+        ctaSaldoActual: 10.15,
+        ctaColor: '#7C3AED',
+        ctaIcono: 'piggy-bank',
+        ctaActiva: true,
+        ctaCreadoEn: '2026-11-19T10:05:00.000Z',
+        ctaActualizadoEn: '2026-11-19T10:05:00.000Z',
+      },
+      {
+        ctaId: '00000000-0000-4000-8000-000000000102',
+        ctaUsrId: USER_1_ID,
+        ctaCtaPadreId: padreId,
+        ctaNaturaleza: null,
+        ctaNombre: 'Bolsillo Inactivo',
+        ctaSaldoInicial: 500,
+        ctaSaldoActual: 500,
+        ctaColor: '#7C3AED',
+        ctaIcono: 'archive',
+        ctaActiva: false,
+        ctaCreadoEn: '2026-11-19T10:06:00.000Z',
+        ctaActualizadoEn: '2026-11-19T10:06:00.000Z',
+      },
+      {
+        ctaId: '00000000-0000-4000-8000-000000000103',
+        ctaUsrId: USER_1_ID,
+        ctaCtaPadreId: null,
+        ctaNaturaleza: 'BANCO',
+        ctaNombre: 'Cuenta Cerrada',
+        ctaSaldoInicial: 200,
+        ctaSaldoActual: 200,
+        ctaColor: '#0F172A',
+        ctaIcono: 'landmark',
+        ctaActiva: false,
+        ctaCreadoEn: '2026-11-19T10:07:00.000Z',
+        ctaActualizadoEn: '2026-11-19T10:07:00.000Z',
+      },
+    );
+
+    const listRes = await request(app.getHttpServer())
+      .get('/api/cuentas?incluirInactivas=true')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = listRes.body as Array<{
+      ctaId: string;
+      saldoPropio: number;
+      saldoSubcuentas: number;
+      saldoConsolidado: number;
+      subcuentas: Array<{ ctaNombre: string }>;
+    }>;
+
+    expect(body).toHaveLength(2);
+    const activa = body.find((c) => c.ctaId === padreId);
+    expect(activa).toMatchObject({
+      saldoPropio: 0,
+      saldoSubcuentas: 10.15,
+      saldoConsolidado: 10.15,
+    });
+    expect(activa?.subcuentas).toHaveLength(2);
+  });
 });
