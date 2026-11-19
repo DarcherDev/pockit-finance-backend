@@ -223,9 +223,28 @@ describe('HU-03.2 Creación y Detalle de Subcuentas (e2e)', () => {
       ctaIcono: 'piggy-bank',
       ctaActiva: true,
     });
+
+    const subDefaultRes = await request(app.getHttpServer())
+      .post(`/api/cuentas/${padreId}/subcuentas`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ctaNombre: '  Bolsillo Sin Saldo  ',
+        ctaColor: '#10B981',
+        ctaIcono: 'coins',
+      })
+      .expect(201);
+
+    expect(subDefaultRes.body).toMatchObject({
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Sin Saldo',
+      ctaSaldoInicial: 0,
+      ctaSaldoActual: 0,
+      ctaActiva: true,
+    });
   });
 
-  it('2. Crear subcuenta con ctaSaldoInicial < 0 o UUID inválido retorna 400 Bad Request', async () => {
+  it('2. Crear subcuenta con ctaSaldoInicial < 0, payload inválido (forbidNonWhitelisted/decimales) o UUID inválido retorna 400 Bad Request', async () => {
     const token = signToken(USER_1_ID, 'ana@pockit.finance');
     const padreId = '00000000-0000-4000-8000-000000000010';
 
@@ -245,6 +264,44 @@ describe('HU-03.2 Creación y Detalle de Subcuentas (e2e)', () => {
       code: 'VALIDATION_ERROR',
     });
 
+    const resNonWhitelisted = await request(app.getHttpServer())
+      .post(`/api/cuentas/${padreId}/subcuentas`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ctaNombre: 'Bolsillo',
+        ctaNaturaleza: 'BANCO',
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'piggy-bank',
+      })
+      .expect(400);
+
+    expect(resNonWhitelisted.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+
+    const resNonNumericSaldo = await request(app.getHttpServer())
+      .post(`/api/cuentas/${padreId}/subcuentas`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ctaNombre: 'Bolsillo',
+        ctaSaldoInicial: 'no-es-numero',
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'piggy-bank',
+      })
+      .expect(400);
+
+    expect(resNonNumericSaldo.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/cuentas/${padreId}/subcuentas`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(400);
+
     await request(app.getHttpServer())
       .post('/api/cuentas/no-es-uuid/subcuentas')
       .set('Authorization', `Bearer ${token}`)
@@ -253,6 +310,11 @@ describe('HU-03.2 Creación y Detalle de Subcuentas (e2e)', () => {
         ctaColor: '#0EA5E9',
         ctaIcono: 'piggy-bank',
       })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .get('/api/cuentas/no-es-uuid/detalle')
+      .set('Authorization', `Bearer ${token}`)
       .expect(400);
   });
 
@@ -369,9 +431,36 @@ describe('HU-03.2 Creación y Detalle de Subcuentas (e2e)', () => {
       statusCode: 404,
       code: 'CUENTA_NO_ENCONTRADA',
     });
+
+    const nonexistentId = '00000000-0000-4000-8000-999999999999';
+
+    const postMissingRes = await request(app.getHttpServer())
+      .post(`/api/cuentas/${nonexistentId}/subcuentas`)
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({
+        ctaNombre: 'Intento Inexistente',
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'piggy-bank',
+      })
+      .expect(404);
+
+    expect(postMissingRes.body).toMatchObject({
+      statusCode: 404,
+      code: 'CUENTA_NO_ENCONTRADA',
+    });
+
+    const getMissingRes = await request(app.getHttpServer())
+      .get(`/api/cuentas/${nonexistentId}/detalle`)
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .expect(404);
+
+    expect(getMissingRes.body).toMatchObject({
+      statusCode: 404,
+      code: 'CUENTA_NO_ENCONTRADA',
+    });
   });
 
-  it('6. GET /api/cuentas/:id/detalle retorna cuenta, subcuentas y saldos consolidados exactos', async () => {
+  it('6. GET /api/cuentas/:id/detalle retorna cuenta, subcuentas y saldos consolidados exactos excluyendo subcuentas inactivas', async () => {
     const token = signToken(USER_1_ID, 'ana@pockit.finance');
 
     const padreRes = await request(app.getHttpServer())
@@ -399,6 +488,21 @@ describe('HU-03.2 Creación y Detalle de Subcuentas (e2e)', () => {
       })
       .expect(201);
 
+    store.push({
+      ctaId: '00000000-0000-4000-8000-000000000099',
+      ctaUsrId: USER_1_ID,
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Inactivo',
+      ctaSaldoInicial: 999.99,
+      ctaSaldoActual: 999.99,
+      ctaColor: '#64748B',
+      ctaIcono: 'archive',
+      ctaActiva: false,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+
     const detalleRes = await request(app.getHttpServer())
       .get(`/api/cuentas/${padreId}/detalle`)
       .set('Authorization', `Bearer ${token}`)
@@ -413,6 +517,23 @@ describe('HU-03.2 Creación y Detalle de Subcuentas (e2e)', () => {
     });
     expect(
       (detalleRes.body as { subcuentas: unknown[] }).subcuentas,
-    ).toHaveLength(1);
+    ).toHaveLength(2);
+  });
+
+  it('7. Endpoints de subcuentas y detalle sin token retornan 401 Unauthorized', async () => {
+    const cuentaId = '00000000-0000-4000-8000-000000000010';
+
+    await request(app.getHttpServer())
+      .post(`/api/cuentas/${cuentaId}/subcuentas`)
+      .send({
+        ctaNombre: 'Bolsillo',
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'piggy-bank',
+      })
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get(`/api/cuentas/${cuentaId}/detalle`)
+      .expect(401);
   });
 });
