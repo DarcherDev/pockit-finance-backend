@@ -9,6 +9,7 @@ import { SupabaseJwtGuard } from './auth/presentation/guards/supabase-jwt.guard'
 import { CategoriasModule } from './categorias/categorias.module';
 import { getDatabaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
+import { CuentasModule } from './cuentas/cuentas.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 
@@ -25,6 +26,7 @@ import { HealthModule } from './health/health.module';
     DatabaseModule,
     AuthModule,
     CategoriasModule,
+    CuentasModule,
     HealthModule,
   ],
   controllers: [AppController],
