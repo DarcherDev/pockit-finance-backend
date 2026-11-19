@@ -27,6 +27,15 @@ export interface CreateCuentaParams {
   ctaActiva: boolean;
 }
 
+export interface UpdateCuentaData {
+  ctaNombre?: string;
+  ctaColor?: string;
+  ctaIcono?: string;
+  ctaNaturaleza?: NaturalezaCuenta | null;
+  ctaSaldoInicial?: number;
+  ctaSaldoActual?: number;
+}
+
 export interface CuentaConSaldosModel extends CuentaModel {
   saldoPropio: number;
   saldoSubcuentas: number;

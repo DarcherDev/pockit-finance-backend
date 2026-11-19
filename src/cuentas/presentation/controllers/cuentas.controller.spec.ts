@@ -4,8 +4,10 @@ import { CuentasService } from '../../application/services/cuentas.service';
 import { CreateCuentaRequest } from '../dto/request/create-cuenta.request';
 import { CreateSubcuentaRequest } from '../dto/request/create-subcuenta.request';
 import { ListarCuentasQueryRequest } from '../dto/request/listar-cuentas-query.request';
+import { UpdateCuentaRequest } from '../dto/request/update-cuenta.request';
 import { CuentaJerarquicaResponse } from '../dto/response/cuenta-jerarquica.response';
 import { CuentaResponse } from '../dto/response/cuenta.response';
+import { DeleteCuentaResponse } from '../dto/response/delete-cuenta.response';
 import { CuentasController } from './cuentas.controller';
 
 describe('CuentasController', () => {
@@ -17,6 +19,8 @@ describe('CuentasController', () => {
       | 'listarCuentas'
       | 'crearSubcuenta'
       | 'obtenerDetalleCuenta'
+      | 'actualizarCuenta'
+      | 'eliminarCuenta'
     >
   >;
 
@@ -31,6 +35,8 @@ describe('CuentasController', () => {
       listarCuentas: jest.fn(),
       crearSubcuenta: jest.fn(),
       obtenerDetalleCuenta: jest.fn(),
+      actualizarCuenta: jest.fn(),
+      eliminarCuenta: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -155,6 +161,49 @@ describe('CuentasController', () => {
       authUser.usrId,
       ctaId,
     );
+    expect(result).toBe(expected);
+  });
+
+  it('actualizar delega en CuentasService.actualizarCuenta usando usrId del JWT, id y dto', async () => {
+    const ctaId = '00000000-0000-4000-8000-000000000001';
+    const dto: UpdateCuentaRequest = {
+      ctaNombre: 'Bancolombia Nómina',
+      ctaSaldoInicial: 140,
+    };
+    const expected = Object.assign(new CuentaResponse(), {
+      ctaId,
+      ctaUsrId: authUser.usrId,
+      ctaNombre: 'Bancolombia Nómina',
+      ctaSaldoInicial: 140,
+      ctaSaldoActual: 190,
+    });
+
+    service.actualizarCuenta.mockResolvedValue(expected);
+
+    const result = await controller.actualizar(authUser, ctaId, dto);
+
+    expect(service.actualizarCuenta).toHaveBeenCalledWith(
+      authUser.usrId,
+      ctaId,
+      dto,
+    );
+    expect(result).toBe(expected);
+  });
+
+  it('eliminar delega en CuentasService.eliminarCuenta usando usrId del JWT e id', async () => {
+    const ctaId = '00000000-0000-4000-8000-000000000001';
+    const expected = Object.assign(new DeleteCuentaResponse(), {
+      ctaId,
+      eliminadoFisicamente: false,
+      ctaActiva: false,
+      mensaje: 'Cuenta desactivada lógicamente por poseer historial contable',
+    });
+
+    service.eliminarCuenta.mockResolvedValue(expected);
+
+    const result = await controller.eliminar(authUser, ctaId);
+
+    expect(service.eliminarCuenta).toHaveBeenCalledWith(authUser.usrId, ctaId);
     expect(result).toBe(expected);
   });
 });

@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -17,7 +19,9 @@ import {
   CreateSubcuentaRequest,
   CuentaJerarquicaResponse,
   CuentaResponse,
+  DeleteCuentaResponse,
   ListarCuentasQueryRequest,
+  UpdateCuentaRequest,
 } from '../dto';
 
 @Controller('cuentas')
@@ -60,5 +64,24 @@ export class CuentasController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CuentaJerarquicaResponse> {
     return this.cuentasService.obtenerDetalleCuenta(user.usrId, id);
+  }
+
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  actualizar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateCuentaRequest,
+  ): Promise<CuentaResponse> {
+    return this.cuentasService.actualizarCuenta(user.usrId, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  eliminar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<DeleteCuentaResponse> {
+    return this.cuentasService.eliminarCuenta(user.usrId, id);
   }
 }
