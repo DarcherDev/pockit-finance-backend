@@ -1,5 +1,8 @@
 import type { CuentaModel } from '../model/cuenta.model';
-import { construirJerarquiaCuentas } from './cuentas-balance.rules';
+import {
+  construirDetalleCuenta,
+  construirJerarquiaCuentas,
+} from './cuentas-balance.rules';
 
 const USR_ID = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -145,5 +148,59 @@ describe('construirJerarquiaCuentas', () => {
     expect(inactiva?.saldoSubcuentas).toBe(0);
     expect(inactiva?.saldoConsolidado).toBe(100);
     expect(inactiva?.subcuentas).toEqual([]);
+  });
+});
+
+describe('construirDetalleCuenta', () => {
+  it('calcula saldoPropio, saldoSubcuentas (solo activas) y saldoConsolidado con precisión en centavos', () => {
+    const padre = buildCuenta({
+      ctaId: 'padre-1',
+      ctaSaldoActual: 0.1,
+    });
+    const subcuentas: CuentaModel[] = [
+      buildCuenta({
+        ctaId: 'sub-1',
+        ctaCtaPadreId: 'padre-1',
+        ctaNaturaleza: null,
+        ctaSaldoActual: 0.2,
+        ctaActiva: true,
+      }),
+      buildCuenta({
+        ctaId: 'sub-2',
+        ctaCtaPadreId: 'padre-1',
+        ctaNaturaleza: null,
+        ctaSaldoActual: 500,
+        ctaActiva: false,
+      }),
+    ];
+
+    const detalle = construirDetalleCuenta(padre, subcuentas);
+
+    expect(detalle).toMatchObject({
+      ctaId: 'padre-1',
+      saldoPropio: 0.1,
+      saldoSubcuentas: 0.2,
+      saldoConsolidado: 0.3,
+    });
+    expect(detalle.subcuentas.map((s) => s.ctaId)).toEqual(['sub-1', 'sub-2']);
+  });
+
+  it('retorna saldoSubcuentas = 0 y subcuentas = [] cuando la cuenta no tiene hijas', () => {
+    const subcuenta = buildCuenta({
+      ctaId: 'sub-1',
+      ctaCtaPadreId: 'padre-1',
+      ctaNaturaleza: null,
+      ctaSaldoActual: 75.5,
+    });
+
+    const detalle = construirDetalleCuenta(subcuenta, []);
+
+    expect(detalle).toMatchObject({
+      ctaId: 'sub-1',
+      saldoPropio: 75.5,
+      saldoSubcuentas: 0,
+      saldoConsolidado: 75.5,
+      subcuentas: [],
+    });
   });
 });

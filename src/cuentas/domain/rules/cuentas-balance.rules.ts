@@ -4,6 +4,35 @@ import {
 } from '../../../common/serialization/numeric-money.serializer';
 import type { CuentaConSaldosModel, CuentaModel } from '../model/cuenta.model';
 
+const buildCuentaConSaldos = (
+  cuenta: CuentaModel,
+  subcuentasVisibles: CuentaModel[],
+  subcuentasActivas: CuentaModel[],
+): CuentaConSaldosModel => {
+  const saldoPropio = roundMoney(cuenta.ctaSaldoActual);
+  const saldoSubcuentas = subcuentasActivas.reduce(
+    (acc, sub) => addMoney(acc, sub.ctaSaldoActual),
+    0,
+  );
+  const saldoConsolidado = addMoney(saldoPropio, saldoSubcuentas);
+
+  return {
+    ...cuenta,
+    saldoPropio,
+    saldoSubcuentas,
+    saldoConsolidado,
+    subcuentas: subcuentasVisibles,
+  };
+};
+
+export const construirDetalleCuenta = (
+  cuenta: CuentaModel,
+  subcuentas: CuentaModel[],
+): CuentaConSaldosModel => {
+  const subcuentasActivas = subcuentas.filter((sub) => sub.ctaActiva);
+  return buildCuentaConSaldos(cuenta, subcuentas, subcuentasActivas);
+};
+
 export const construirJerarquiaCuentas = (
   cuentas: CuentaModel[],
   incluirInactivas: boolean,
@@ -30,19 +59,6 @@ export const construirJerarquiaCuentas = (
         ? todasSubcuentas
         : subcuentasActivas;
 
-      const saldoPropio = roundMoney(padre.ctaSaldoActual);
-      const saldoSubcuentas = subcuentasActivas.reduce(
-        (acc, sub) => addMoney(acc, sub.ctaSaldoActual),
-        0,
-      );
-      const saldoConsolidado = addMoney(saldoPropio, saldoSubcuentas);
-
-      return {
-        ...padre,
-        saldoPropio,
-        saldoSubcuentas,
-        saldoConsolidado,
-        subcuentas: subcuentasVisibles,
-      };
+      return buildCuentaConSaldos(padre, subcuentasVisibles, subcuentasActivas);
     });
 };

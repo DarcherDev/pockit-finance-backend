@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DomainException } from '../../../common/exceptions/domain.exception';
 import type { CuentaModel } from '../../domain/model/cuenta.model';
 import {
   CUENTAS_REPOSITORY_PORT,
   type CuentasRepositoryPort,
 } from '../../domain/ports/out/cuentas-repository.port';
 import { CreateCuentaRequest } from '../../presentation/dto/request/create-cuenta.request';
+import { CreateSubcuentaRequest } from '../../presentation/dto/request/create-subcuenta.request';
 import { CuentaJerarquicaResponse } from '../../presentation/dto/response/cuenta-jerarquica.response';
 import { CuentaResponse } from '../../presentation/dto/response/cuenta.response';
 import { CuentasMapper } from '../mappers/cuentas.mapper';
@@ -14,15 +16,21 @@ describe('CuentasService', () => {
   let service: CuentasService;
   let createMock: jest.Mock;
   let findAllByUsuarioMock: jest.Mock;
+  let findByIdAndUsuarioMock: jest.Mock;
+  let findSubcuentasByPadreIdMock: jest.Mock;
 
   const USR_ID = '550e8400-e29b-41d4-a716-446655440000';
 
   beforeEach(async () => {
     createMock = jest.fn();
     findAllByUsuarioMock = jest.fn();
+    findByIdAndUsuarioMock = jest.fn();
+    findSubcuentasByPadreIdMock = jest.fn();
     const repository: jest.Mocked<CuentasRepositoryPort> = {
       create: createMock,
       findAllByUsuario: findAllByUsuarioMock,
+      findByIdAndUsuario: findByIdAndUsuarioMock,
+      findSubcuentasByPadreId: findSubcuentasByPadreIdMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -159,5 +167,255 @@ describe('CuentasService', () => {
     expect(result[0].saldoSubcuentas).toBe(25000.5);
     expect(result[0].saldoConsolidado).toBe(125000.5);
     expect(result[0].subcuentas).toHaveLength(1);
+  });
+
+  it('crearSubcuenta crea una subcuenta con ctaNaturaleza=null, ctaCtaPadreId=padreId y ctaSaldoActual=ctaSaldoInicial', async () => {
+    const padreId = '00000000-0000-4000-8000-000000000001';
+    const padre: CuentaModel = {
+      ctaId: padreId,
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO',
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 100000,
+      ctaSaldoActual: 100000,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    };
+    const dto: CreateSubcuentaRequest = {
+      ctaNombre: 'Bolsillo Vacaciones',
+      ctaSaldoInicial: 25000.5,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+    };
+    const createdSubcuenta: CuentaModel = {
+      ctaId: '00000000-0000-4000-8000-000000000002',
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Vacaciones',
+      ctaSaldoInicial: 25000.5,
+      ctaSaldoActual: 25000.5,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:05:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:05:00.000Z',
+    };
+
+    findByIdAndUsuarioMock.mockResolvedValue(padre);
+    createMock.mockResolvedValue(createdSubcuenta);
+
+    const result = await service.crearSubcuenta(USR_ID, padreId, dto);
+
+    expect(findByIdAndUsuarioMock).toHaveBeenCalledWith(padreId, USR_ID);
+    expect(createMock).toHaveBeenCalledWith({
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Vacaciones',
+      ctaSaldoInicial: 25000.5,
+      ctaSaldoActual: 25000.5,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+    });
+    expect(result).toBeInstanceOf(CuentaResponse);
+    expect(result.ctaCtaPadreId).toBe(padreId);
+    expect(result.ctaNaturaleza).toBeNull();
+    expect(result.ctaSaldoActual).toBe(25000.5);
+  });
+
+  it('crearSubcuenta asigna 0 cuando ctaSaldoInicial no se envía', async () => {
+    const padreId = '00000000-0000-4000-8000-000000000001';
+    findByIdAndUsuarioMock.mockResolvedValue({
+      ctaId: padreId,
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO',
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 0,
+      ctaSaldoActual: 0,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+    createMock.mockResolvedValue({
+      ctaId: 'sub-2',
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Cero',
+      ctaSaldoInicial: 0,
+      ctaSaldoActual: 0,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:05:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:05:00.000Z',
+    });
+
+    await service.crearSubcuenta(USR_ID, padreId, {
+      ctaNombre: 'Bolsillo Cero',
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+    });
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ctaSaldoInicial: 0,
+        ctaSaldoActual: 0,
+      }),
+    );
+  });
+
+  it('crearSubcuenta lanza DomainException 404 CUENTA_NO_ENCONTRADA cuando el padre no existe', async () => {
+    findByIdAndUsuarioMock.mockResolvedValue(null);
+
+    await expect(
+      service.crearSubcuenta(USR_ID, 'no-existe', {
+        ctaNombre: 'Bolsillo',
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'piggy-bank',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CUENTA_NO_ENCONTRADA',
+      status: 404,
+    });
+  });
+
+  it('crearSubcuenta lanza DomainException 422 JERARQUIA_MAXIMA_EXCEDIDA si el padre ya es subcuenta', async () => {
+    findByIdAndUsuarioMock.mockResolvedValue({
+      ctaId: 'sub-1',
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: 'padre-1',
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo',
+      ctaSaldoInicial: 0,
+      ctaSaldoActual: 0,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+
+    const promise = service.crearSubcuenta(USR_ID, 'sub-1', {
+      ctaNombre: 'Nieto',
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(DomainException);
+    await expect(promise).rejects.toMatchObject({
+      code: 'JERARQUIA_MAXIMA_EXCEDIDA',
+      status: 422,
+    });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('crearSubcuenta lanza DomainException 422 CUENTA_PADRE_INACTIVA si la cuenta padre está inactiva', async () => {
+    findByIdAndUsuarioMock.mockResolvedValue({
+      ctaId: 'padre-inactivo',
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO',
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 0,
+      ctaSaldoActual: 0,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: false,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+
+    const promise = service.crearSubcuenta(USR_ID, 'padre-inactivo', {
+      ctaNombre: 'Bolsillo',
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(DomainException);
+    await expect(promise).rejects.toMatchObject({
+      code: 'CUENTA_PADRE_INACTIVA',
+      status: 422,
+    });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('obtenerDetalleCuenta retorna CuentaJerarquicaResponse con subcuentas y saldos exactos', async () => {
+    const ctaId = 'padre-1';
+    findByIdAndUsuarioMock.mockResolvedValue({
+      ctaId,
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO',
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 100,
+      ctaSaldoActual: 100.1,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+    findSubcuentasByPadreIdMock.mockResolvedValue([
+      {
+        ctaId: 'sub-1',
+        ctaUsrId: USR_ID,
+        ctaCtaPadreId: ctaId,
+        ctaNaturaleza: null,
+        ctaNombre: 'Bolsillo Activo',
+        ctaSaldoInicial: 20.2,
+        ctaSaldoActual: 20.2,
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'piggy-bank',
+        ctaActiva: true,
+        ctaCreadoEn: '2026-11-19T10:05:00.000Z',
+        ctaActualizadoEn: '2026-11-19T10:05:00.000Z',
+      },
+      {
+        ctaId: 'sub-2',
+        ctaUsrId: USR_ID,
+        ctaCtaPadreId: ctaId,
+        ctaNaturaleza: null,
+        ctaNombre: 'Bolsillo Inactivo',
+        ctaSaldoInicial: 999,
+        ctaSaldoActual: 999,
+        ctaColor: '#0EA5E9',
+        ctaIcono: 'archive',
+        ctaActiva: false,
+        ctaCreadoEn: '2026-11-19T10:06:00.000Z',
+        ctaActualizadoEn: '2026-11-19T10:06:00.000Z',
+      },
+    ]);
+
+    const result = await service.obtenerDetalleCuenta(USR_ID, ctaId);
+
+    expect(findByIdAndUsuarioMock).toHaveBeenCalledWith(ctaId, USR_ID);
+    expect(findSubcuentasByPadreIdMock).toHaveBeenCalledWith(ctaId, USR_ID);
+    expect(result).toBeInstanceOf(CuentaJerarquicaResponse);
+    expect(result.saldoPropio).toBe(100.1);
+    expect(result.saldoSubcuentas).toBe(20.2);
+    expect(result.saldoConsolidado).toBe(120.3);
+    expect(result.subcuentas).toHaveLength(2);
+  });
+
+  it('obtenerDetalleCuenta lanza DomainException 404 CUENTA_NO_ENCONTRADA si no existe o pertenece a otro usuario', async () => {
+    findByIdAndUsuarioMock.mockResolvedValue(null);
+
+    await expect(
+      service.obtenerDetalleCuenta(USR_ID, 'no-existe'),
+    ).rejects.toMatchObject({
+      code: 'CUENTA_NO_ENCONTRADA',
+      status: 404,
+    });
+    expect(findSubcuentasByPadreIdMock).not.toHaveBeenCalled();
   });
 });

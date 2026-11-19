@@ -16,4 +16,14 @@ export interface CuentasRepositoryPort {
     incluirInactivas: boolean,
     ctx?: TransactionContext,
   ): Promise<CuentaModel[]>;
+  findByIdAndUsuario(
+    ctaId: string,
+    usrId: string,
+    ctx?: TransactionContext,
+  ): Promise<CuentaModel | null>;
+  findSubcuentasByPadreId(
+    padreId: string,
+    usrId: string,
+    ctx?: TransactionContext,
+  ): Promise<CuentaModel[]>;
 }
