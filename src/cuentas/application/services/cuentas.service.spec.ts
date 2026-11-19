@@ -12,14 +12,17 @@ import { CuentasService } from './cuentas.service';
 
 describe('CuentasService', () => {
   let service: CuentasService;
-  let repository: jest.Mocked<CuentasRepositoryPort>;
+  let createMock: jest.Mock;
+  let findAllByUsuarioMock: jest.Mock;
 
   const USR_ID = '550e8400-e29b-41d4-a716-446655440000';
 
   beforeEach(async () => {
-    repository = {
-      create: jest.fn(),
-      findAllByUsuario: jest.fn(),
+    createMock = jest.fn();
+    findAllByUsuarioMock = jest.fn();
+    const repository: jest.Mocked<CuentasRepositoryPort> = {
+      create: createMock,
+      findAllByUsuario: findAllByUsuarioMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -60,11 +63,11 @@ describe('CuentasService', () => {
       ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
     };
 
-    repository.create.mockResolvedValue(savedModel);
+    createMock.mockResolvedValue(savedModel);
 
     const result = await service.crearCuentaPrincipal(USR_ID, request);
 
-    expect(repository.create).toHaveBeenCalledWith({
+    expect(createMock).toHaveBeenCalledWith({
       ctaUsrId: USR_ID,
       ctaCtaPadreId: null,
       ctaNaturaleza: 'BANCO',
@@ -88,7 +91,7 @@ describe('CuentasService', () => {
       ctaIcono: 'wallet',
     };
 
-    repository.create.mockResolvedValue({
+    createMock.mockResolvedValue({
       ctaId: 'cta-2',
       ctaUsrId: USR_ID,
       ctaCtaPadreId: null,
@@ -105,7 +108,7 @@ describe('CuentasService', () => {
 
     await service.crearCuentaPrincipal(USR_ID, request);
 
-    expect(repository.create).toHaveBeenCalledWith(
+    expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ctaSaldoInicial: 0,
         ctaSaldoActual: 0,
@@ -145,11 +148,11 @@ describe('CuentasService', () => {
       },
     ];
 
-    repository.findAllByUsuario.mockResolvedValue(models);
+    findAllByUsuarioMock.mockResolvedValue(models);
 
     const result = await service.listarCuentas(USR_ID, false);
 
-    expect(repository.findAllByUsuario).toHaveBeenCalledWith(USR_ID, false);
+    expect(findAllByUsuarioMock).toHaveBeenCalledWith(USR_ID, false);
     expect(result).toHaveLength(1);
     expect(result[0]).toBeInstanceOf(CuentaJerarquicaResponse);
     expect(result[0].saldoPropio).toBe(100000);

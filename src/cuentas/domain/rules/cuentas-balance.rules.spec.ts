@@ -55,7 +55,10 @@ describe('construirJerarquiaCuentas', () => {
       saldoSubcuentas: 100.55,
       saldoConsolidado: 100.65,
     });
-    expect(result[0].subcuentas.map((s) => s.ctaId)).toEqual(['sub-1', 'sub-2']);
+    expect(result[0].subcuentas.map((s) => s.ctaId)).toEqual([
+      'sub-1',
+      'sub-2',
+    ]);
   });
 
   it('excluye cuentas raíz inactivas y subcuentas inactivas cuando incluirInactivas es false', () => {

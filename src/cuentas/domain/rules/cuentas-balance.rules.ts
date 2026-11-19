@@ -2,10 +2,7 @@ import {
   addMoney,
   roundMoney,
 } from '../../../common/serialization/numeric-money.serializer';
-import type {
-  CuentaConSaldosModel,
-  CuentaModel,
-} from '../model/cuenta.model';
+import type { CuentaConSaldosModel, CuentaModel } from '../model/cuenta.model';
 
 export const construirJerarquiaCuentas = (
   cuentas: CuentaModel[],
@@ -24,8 +21,7 @@ export const construirJerarquiaCuentas = (
   return cuentas
     .filter(
       (cuenta) =>
-        cuenta.ctaCtaPadreId === null &&
-        (incluirInactivas || cuenta.ctaActiva),
+        cuenta.ctaCtaPadreId === null && (incluirInactivas || cuenta.ctaActiva),
     )
     .map((padre) => {
       const todasSubcuentas = subcuentasPorPadre.get(padre.ctaId) ?? [];

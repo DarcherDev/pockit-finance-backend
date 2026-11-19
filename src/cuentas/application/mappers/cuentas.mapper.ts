@@ -25,9 +25,7 @@ export class CuentasMapper {
     return response;
   }
 
-  toJerarquicaResponse(
-    model: CuentaConSaldosModel,
-  ): CuentaJerarquicaResponse {
+  toJerarquicaResponse(model: CuentaConSaldosModel): CuentaJerarquicaResponse {
     const response = new CuentaJerarquicaResponse();
     Object.assign(response, this.toResponse(model));
     response.saldoPropio = model.saldoPropio;

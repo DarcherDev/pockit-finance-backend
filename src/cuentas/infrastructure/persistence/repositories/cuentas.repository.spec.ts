@@ -89,8 +89,9 @@ describe('CuentasRepository', () => {
       create: jest.fn().mockReturnValue(entity),
       save: jest.fn().mockResolvedValue(entity),
     };
+    const getRepositoryMock = jest.fn().mockReturnValue(managerRepoMock);
     const managerMock = {
-      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+      getRepository: getRepositoryMock,
     } as unknown as EntityManager;
 
     const result = await repository.create(
@@ -98,7 +99,7 @@ describe('CuentasRepository', () => {
       managerMock as unknown as TransactionContext,
     );
 
-    expect(managerMock.getRepository).toHaveBeenCalledWith(CuentaEntity);
+    expect(getRepositoryMock).toHaveBeenCalledWith(CuentaEntity);
     expect(managerRepoMock.create).toHaveBeenCalledWith(params);
     expect(managerRepoMock.save).toHaveBeenCalledWith(entity);
     expect(typeOrmRepo.save).not.toHaveBeenCalled();
