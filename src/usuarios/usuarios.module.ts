@@ -23,4 +23,4 @@ import { UsuariosController } from './presentation/controllers/usuarios.controll
   ],
   exports: [UsuariosService],
 })
-export class UsuariosModule { }
+export class UsuariosModule {}

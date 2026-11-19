@@ -30,6 +30,14 @@ export class SupabaseAuthService implements AuthProviderPort {
         autoRefreshToken: false,
         persistSession: false,
       },
+      ...(typeof globalThis.WebSocket === 'undefined'
+        ? {
+            realtime: {
+              // Evita fallo de arranque en Node 20 cuando @supabase/supabase-js inicializa Realtime sin usar sockets.
+              transport: class NoopWebSocket {} as unknown as typeof WebSocket,
+            },
+          }
+        : {}),
     };
 
     this.supabase = createClient(supabaseUrl, supabaseSecretKey, clientOptions);

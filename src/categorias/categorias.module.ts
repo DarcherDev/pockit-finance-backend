@@ -21,4 +21,4 @@ import { CategoriasRepository } from './infrastructure/persistence/repositories/
   ],
   exports: [CategoriasService],
 })
-export class CategoriasModule { }
+export class CategoriasModule {}

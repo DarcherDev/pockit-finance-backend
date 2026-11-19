@@ -91,22 +91,22 @@ describe('SupabaseAuthService', () => {
     expect(createClient).toHaveBeenCalledWith(
       'https://test-project.supabase.co',
       'sb_secret_test_key',
-      {
+      expect.objectContaining({
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
-      },
+      }),
     );
     expect(createClient).toHaveBeenCalledWith(
       'https://test-project.supabase.co',
       'sb_publishable_test_key',
-      {
+      expect.objectContaining({
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
-      },
+      }),
     );
   });
 
