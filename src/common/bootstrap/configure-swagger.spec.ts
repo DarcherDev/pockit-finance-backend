@@ -9,7 +9,10 @@ describe('configureSwagger', () => {
 
   it('construye la especificación OpenAPI y monta Swagger UI en api/docs y api/docs-json', () => {
     const app = {} as INestApplication;
-    const mockDocument = { openapi: '3.0.0', info: { title: 'Pockit Finance API' } } as OpenAPIObject;
+    const mockDocument = {
+      openapi: '3.0.0',
+      info: { title: 'Pockit Finance API' },
+    } as OpenAPIObject;
 
     const createDocumentSpy = jest
       .spyOn(SwaggerModule, 'createDocument')

@@ -17,7 +17,9 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Verificar estado de salud de la API y base de datos' })
+  @ApiOperation({
+    summary: 'Verificar estado de salud de la API y base de datos',
+  })
   @ApiOkResponse({
     description: 'Servicio y base de datos operativos',
     type: HealthResponse,

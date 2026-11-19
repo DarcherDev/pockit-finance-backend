@@ -69,7 +69,8 @@ export class CuentasController {
   @Get()
   @ApiOperation({ summary: 'Listar cuentas jerárquicas del usuario' })
   @ApiOkResponse({
-    description: 'Listado de cuentas principales con sus subcuentas y saldos consolidados',
+    description:
+      'Listado de cuentas principales con sus subcuentas y saldos consolidados',
     type: [CuentaJerarquicaResponse],
   })
   @ApiBadRequestResponse({
