@@ -94,14 +94,24 @@ npm run lint
 npm run format
 ```
 
-## Estructura Base
+## Estructura Base (Arquitectura en 4 Capas)
 
 ```text
 src/
+├── common/
+│   └── domain/              # DomainError, TransactionContext, UnitOfWorkPort
 ├── config/
 │   └── database.config.ts   # Configuración TypeORM + PostgreSQL/Supabase
+├── database/
+│   ├── database.module.ts   # Módulo global que provee UNIT_OF_WORK_PORT
+│   └── typeorm-unit-of-work.ts
+├── auth/ | usuarios/ | categorias/ | health/
+│   ├── presentation/        # Controllers, DTOs, Guards, Decorators
+│   ├── application/         # Services (Casos de uso) y Response Mappers
+│   ├── domain/              # Modelos puros, Reglas/Políticas y Ports
+│   └── infrastructure/      # Entities TypeORM, Repositories, Persistence Mappers y Adapters
 ├── app.controller.ts
-├── app.module.ts            # ConfigModule y TypeOrmModule.forRootAsync
+├── app.module.ts            # ConfigModule, TypeOrmModule y DatabaseModule
 ├── app.service.ts
 └── main.ts
 ```

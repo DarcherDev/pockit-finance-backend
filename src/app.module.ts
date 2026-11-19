@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { SupabaseJwtGuard } from './auth/guards/supabase-jwt.guard';
+import { SupabaseJwtGuard } from './auth/presentation/guards/supabase-jwt.guard';
 import { CategoriasModule } from './categorias/categorias.module';
 import { getDatabaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
+import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthModule } from './health/health.module';
       inject: [ConfigService],
       useFactory: getDatabaseConfig,
     }),
+    DatabaseModule,
     AuthModule,
     CategoriasModule,
     HealthModule,

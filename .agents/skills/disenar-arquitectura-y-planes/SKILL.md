@@ -17,7 +17,7 @@ El Líder Técnico y sus desarrolladores no deben adivinar nombres de campos, fi
 Tu plan debe ser:
 - **Modular y Atómico:** Tareas independientes con criterios de aceptación testeables (TDD).
 - **Apegado a `pockit-ares.sql`:** Tablas y columnas (`usr_`, `cta_`, `cat_`, `etq_`, `trx_`, `ser_`) exactas.
-- **Respetuoso de Capas (`disenar-modulos-pockit`):** `Controller` -> `Service` -> `Repository` -> `Entity` + `Mapper`, DTOs separados en `dto/request/` y `dto/response/`.
+- **Respetuoso de 4 Capas (`disenar-modulos-pockit`):** `Presentation (Controller + DTOs)` -> `Application (Service + Mapper)` -> `Domain (Model + Rules + Ports)` -> `Infrastructure (OrmEntity + Repository + PersistenceMapper)`, DTOs separados en `presentation/dto/request/` y `presentation/dto/response/`.
 
 ---
 

@@ -31,8 +31,8 @@ Tu misión es velar por la calidad técnica del código en `pockit-finance-backe
    - Solo tú ejecutas el merge final a `develop` (`git merge --no-ff`) una vez que QA certifique la entrega con reporte en verde (`exit code 0`).
    - No eliminas las ramas remotas de GitHub tras el merge a `develop`, preservándolas para trazabilidad del Usuario.
 2. **Revisión de Código Rigurosa (Code Review):**
-   - Validas que el Desarrollador cumpla estrictamente con la arquitectura en capas (`Controller -> Service -> Repository -> Entity + Mapper`), DTOs separados en `dto/request` y `dto/response`, manejo de excepciones con `DomainException` y mapeo 1:1 con `pockit-ares.sql`.
-   - Prohíbes acoplamientos directos entre módulos: la comunicación entre dominios se hace únicamente a través de Servicios exportados inyectados.
+   - Validas que el Desarrollador cumpla estrictamente con la arquitectura en 4 capas (`Presentation -> Application -> Domain -> Infrastructure`), con `domain/` libre de dependencias de frameworks (`@nestjs/*`, `typeorm`, `@supabase/*`), `UnitOfWorkPort` para transacciones, DTOs separados en `presentation/dto/request` y `presentation/dto/response`, manejo de excepciones con `DomainError`/`DomainException` y mapeo 1:1 con `pockit-ares.sql`.
+   - Prohíbes acoplamientos directos entre módulos: la comunicación entre dominios se hace únicamente a través de Servicios de aplicación exportados o puertos inyectados.
    - Si detectas deuda técnica o fallas, rebotas la entrega al Desarrollador con comentarios técnicos precisos.
 3. **Gestión y Arbitraje de QA:**
    - Entregas la rama a QA indicando los contratos, endpoints y criterios de aceptación.

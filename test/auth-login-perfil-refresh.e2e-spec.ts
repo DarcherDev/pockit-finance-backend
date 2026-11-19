@@ -8,11 +8,11 @@ import { AddressInfo } from 'net';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
-import { SupabaseAuthService } from './../src/auth/services/supabase-auth.service';
+import { SupabaseAuthService } from './../src/auth/infrastructure/adapters/supabase-auth.service';
 import { configureApp } from './../src/common/bootstrap/configure-app';
 import { DomainException } from './../src/common/exceptions/domain.exception';
-import { UsuarioResponse } from './../src/usuarios/dto/response/usuario.response';
-import { UsuariosService } from './../src/usuarios/services/usuarios.service';
+import { UsuariosService } from './../src/usuarios/application/services/usuarios.service';
+import { UsuarioResponse } from './../src/usuarios/presentation/dto/response/usuario.response';
 
 describe('HU-02.2 Inicio de Sesión, Consulta de Perfil y Renovación de Token (e2e)', () => {
   const testSupabaseUrl = 'https://e2e-test.supabase.co';

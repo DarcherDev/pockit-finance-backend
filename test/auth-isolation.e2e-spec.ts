@@ -20,8 +20,8 @@ import type { AuthenticatedUser } from './../src/common/auth/authenticated-user.
 import { assertResourceOwnership } from './../src/common/auth/resource-ownership.util';
 import { configureApp } from './../src/common/bootstrap/configure-app';
 import { CurrentUser } from './../src/common/decorators/current-user.decorator';
-import { UsuarioResponse } from './../src/usuarios/dto/response/usuario.response';
-import { UsuariosService } from './../src/usuarios/services/usuarios.service';
+import { UsuariosService } from './../src/usuarios/application/services/usuarios.service';
+import { UsuarioResponse } from './../src/usuarios/presentation/dto/response/usuario.response';
 
 class PrivateCreateItemDto {
   @IsString()
