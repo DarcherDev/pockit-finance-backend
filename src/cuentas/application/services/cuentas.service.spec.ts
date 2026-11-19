@@ -1,4 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  type TransactionContext,
+  UNIT_OF_WORK_PORT,
+  type UnitOfWorkPort,
+} from '../../../common/domain';
 import { DomainException } from '../../../common/exceptions/domain.exception';
 import type { CuentaModel } from '../../domain/model/cuenta.model';
 import {
@@ -7,8 +12,10 @@ import {
 } from '../../domain/ports/out/cuentas-repository.port';
 import { CreateCuentaRequest } from '../../presentation/dto/request/create-cuenta.request';
 import { CreateSubcuentaRequest } from '../../presentation/dto/request/create-subcuenta.request';
+import { UpdateCuentaRequest } from '../../presentation/dto/request/update-cuenta.request';
 import { CuentaJerarquicaResponse } from '../../presentation/dto/response/cuenta-jerarquica.response';
 import { CuentaResponse } from '../../presentation/dto/response/cuenta.response';
+import { DeleteCuentaResponse } from '../../presentation/dto/response/delete-cuenta.response';
 import { CuentasMapper } from '../mappers/cuentas.mapper';
 import { CuentasService } from './cuentas.service';
 
@@ -18,19 +25,48 @@ describe('CuentasService', () => {
   let findAllByUsuarioMock: jest.Mock;
   let findByIdAndUsuarioMock: jest.Mock;
   let findSubcuentasByPadreIdMock: jest.Mock;
+  let findByIdAndUsuarioForUpdateMock: jest.Mock;
+  let findCuentaYSubcuentasForUpdateMock: jest.Mock;
+  let updateByIdMock: jest.Mock;
+  let contarTransaccionesPorCuentasMock: jest.Mock;
+  let desactivarCuentasMock: jest.Mock;
+  let deleteByIdAndUsuarioMock: jest.Mock;
+  let runInTransactionMock: jest.Mock;
 
   const USR_ID = '550e8400-e29b-41d4-a716-446655440000';
+  const TX_MOCK = { __tx: 'mock' } as unknown as TransactionContext;
 
   beforeEach(async () => {
     createMock = jest.fn();
     findAllByUsuarioMock = jest.fn();
     findByIdAndUsuarioMock = jest.fn();
     findSubcuentasByPadreIdMock = jest.fn();
+    findByIdAndUsuarioForUpdateMock = jest.fn();
+    findCuentaYSubcuentasForUpdateMock = jest.fn();
+    updateByIdMock = jest.fn();
+    contarTransaccionesPorCuentasMock = jest.fn();
+    desactivarCuentasMock = jest.fn();
+    deleteByIdAndUsuarioMock = jest.fn();
+    runInTransactionMock = jest.fn(
+      <T>(work: (tx: TransactionContext) => Promise<T>): Promise<T> =>
+        work(TX_MOCK),
+    );
+
     const repository: jest.Mocked<CuentasRepositoryPort> = {
       create: createMock,
       findAllByUsuario: findAllByUsuarioMock,
       findByIdAndUsuario: findByIdAndUsuarioMock,
       findSubcuentasByPadreId: findSubcuentasByPadreIdMock,
+      findByIdAndUsuarioForUpdate: findByIdAndUsuarioForUpdateMock,
+      findCuentaYSubcuentasForUpdate: findCuentaYSubcuentasForUpdateMock,
+      updateById: updateByIdMock,
+      contarTransaccionesPorCuentas: contarTransaccionesPorCuentasMock,
+      desactivarCuentas: desactivarCuentasMock,
+      deleteByIdAndUsuario: deleteByIdAndUsuarioMock,
+    };
+
+    const unitOfWork: jest.Mocked<UnitOfWorkPort> = {
+      runInTransaction: runInTransactionMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -40,6 +76,10 @@ describe('CuentasService', () => {
         {
           provide: CUENTAS_REPOSITORY_PORT,
           useValue: repository,
+        },
+        {
+          provide: UNIT_OF_WORK_PORT,
+          useValue: unitOfWork,
         },
       ],
     }).compile();
@@ -417,5 +457,186 @@ describe('CuentasService', () => {
       status: 404,
     });
     expect(findSubcuentasByPadreIdMock).not.toHaveBeenCalled();
+  });
+
+  it('actualizarCuenta recalcula ctaSaldoActual cuando cambia ctaSaldoInicial dentro de transacción FOR UPDATE', async () => {
+    const ctaId = 'cta-1';
+    const cuentaActual: CuentaModel = {
+      ctaId,
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO',
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 100,
+      ctaSaldoActual: 150,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    };
+    const cuentaActualizada: CuentaModel = {
+      ...cuentaActual,
+      ctaNombre: 'Bancolombia Nómina',
+      ctaSaldoInicial: 140,
+      ctaSaldoActual: 190,
+    };
+
+    findByIdAndUsuarioForUpdateMock.mockResolvedValue(cuentaActual);
+    updateByIdMock.mockResolvedValue(cuentaActualizada);
+
+    const dto: UpdateCuentaRequest = {
+      ctaNombre: 'Bancolombia Nómina',
+      ctaSaldoInicial: 140,
+    };
+
+    const result = await service.actualizarCuenta(USR_ID, ctaId, dto);
+
+    expect(runInTransactionMock).toHaveBeenCalledTimes(1);
+    expect(findByIdAndUsuarioForUpdateMock).toHaveBeenCalledWith(
+      ctaId,
+      USR_ID,
+      TX_MOCK,
+    );
+    expect(updateByIdMock).toHaveBeenCalledWith(
+      ctaId,
+      USR_ID,
+      {
+        ctaNombre: 'Bancolombia Nómina',
+        ctaSaldoInicial: 140,
+        ctaSaldoActual: 190,
+      },
+      TX_MOCK,
+    );
+    expect(result).toBeInstanceOf(CuentaResponse);
+    expect(result.ctaSaldoActual).toBe(190);
+  });
+
+  it('actualizarCuenta lanza 404 CUENTA_NO_ENCONTRADA si no existe o es de otro usuario', async () => {
+    findByIdAndUsuarioForUpdateMock.mockResolvedValue(null);
+
+    await expect(
+      service.actualizarCuenta(USR_ID, 'cta-otro', { ctaNombre: 'X' }),
+    ).rejects.toMatchObject({
+      code: 'CUENTA_NO_ENCONTRADA',
+      status: 404,
+    });
+    expect(updateByIdMock).not.toHaveBeenCalled();
+  });
+
+  it('actualizarCuenta lanza 422 SUBCUENTA_NO_ADMITE_NATURALEZA si se envía ctaNaturaleza en una subcuenta', async () => {
+    const subcuenta: CuentaModel = {
+      ctaId: 'sub-1',
+      ctaUsrId: USR_ID,
+      ctaCtaPadreId: 'cta-padre',
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo',
+      ctaSaldoInicial: 50,
+      ctaSaldoActual: 50,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    };
+    findByIdAndUsuarioForUpdateMock.mockResolvedValue(subcuenta);
+
+    await expect(
+      service.actualizarCuenta(USR_ID, 'sub-1', { ctaNaturaleza: 'BANCO' }),
+    ).rejects.toMatchObject({
+      code: 'SUBCUENTA_NO_ADMITE_NATURALEZA',
+      status: 422,
+    });
+    expect(updateByIdMock).not.toHaveBeenCalled();
+  });
+
+  it('eliminarCuenta lanza 404 CUENTA_NO_ENCONTRADA si no existe o es de otro usuario', async () => {
+    findCuentaYSubcuentasForUpdateMock.mockResolvedValue([]);
+
+    await expect(
+      service.eliminarCuenta(USR_ID, 'no-existe'),
+    ).rejects.toMatchObject({
+      code: 'CUENTA_NO_ENCONTRADA',
+      status: 404,
+    });
+    expect(contarTransaccionesPorCuentasMock).not.toHaveBeenCalled();
+  });
+
+  it('eliminarCuenta lanza 409 CUENTA_CON_TRANSACCIONES_PENDIENTES si hay transacciones PENDIENTE', async () => {
+    findCuentaYSubcuentasForUpdateMock.mockResolvedValue([
+      { ctaId: 'cta-1' } as CuentaModel,
+      { ctaId: 'sub-1' } as CuentaModel,
+    ]);
+    contarTransaccionesPorCuentasMock.mockResolvedValue({
+      total: 3,
+      pendientes: 1,
+    });
+
+    await expect(service.eliminarCuenta(USR_ID, 'cta-1')).rejects.toMatchObject(
+      {
+        code: 'CUENTA_CON_TRANSACCIONES_PENDIENTES',
+        status: 409,
+      },
+    );
+    expect(desactivarCuentasMock).not.toHaveBeenCalled();
+    expect(deleteByIdAndUsuarioMock).not.toHaveBeenCalled();
+  });
+
+  it('eliminarCuenta desactiva lógicamente cuenta y subcuentas cuando total > 0 y pendientes === 0', async () => {
+    findCuentaYSubcuentasForUpdateMock.mockResolvedValue([
+      { ctaId: 'cta-1' } as CuentaModel,
+      { ctaId: 'sub-1' } as CuentaModel,
+    ]);
+    contarTransaccionesPorCuentasMock.mockResolvedValue({
+      total: 2,
+      pendientes: 0,
+    });
+
+    const result = await service.eliminarCuenta(USR_ID, 'cta-1');
+
+    expect(runInTransactionMock).toHaveBeenCalledTimes(1);
+    expect(contarTransaccionesPorCuentasMock).toHaveBeenCalledWith(
+      ['cta-1', 'sub-1'],
+      TX_MOCK,
+    );
+    expect(desactivarCuentasMock).toHaveBeenCalledWith(
+      ['cta-1', 'sub-1'],
+      USR_ID,
+      TX_MOCK,
+    );
+    expect(deleteByIdAndUsuarioMock).not.toHaveBeenCalled();
+    expect(result).toBeInstanceOf(DeleteCuentaResponse);
+    expect(result).toEqual({
+      ctaId: 'cta-1',
+      eliminadoFisicamente: false,
+      ctaActiva: false,
+      mensaje: 'Cuenta desactivada lógicamente por poseer historial contable',
+    });
+  });
+
+  it('eliminarCuenta elimina físicamente cuando total === 0', async () => {
+    findCuentaYSubcuentasForUpdateMock.mockResolvedValue([
+      { ctaId: 'cta-1' } as CuentaModel,
+    ]);
+    contarTransaccionesPorCuentasMock.mockResolvedValue({
+      total: 0,
+      pendientes: 0,
+    });
+
+    const result = await service.eliminarCuenta(USR_ID, 'cta-1');
+
+    expect(deleteByIdAndUsuarioMock).toHaveBeenCalledWith(
+      'cta-1',
+      USR_ID,
+      TX_MOCK,
+    );
+    expect(desactivarCuentasMock).not.toHaveBeenCalled();
+    expect(result).toBeInstanceOf(DeleteCuentaResponse);
+    expect(result).toEqual({
+      ctaId: 'cta-1',
+      eliminadoFisicamente: true,
+      ctaActiva: false,
+      mensaje: 'Cuenta eliminada definitivamente',
+    });
   });
 });
