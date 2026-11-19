@@ -51,4 +51,31 @@ export class CuentasRepository implements CuentasRepositoryPort {
 
     return entities.map((entity) => this.persistenceMapper.toDomain(entity));
   }
+
+  async findByIdAndUsuario(
+    ctaId: string,
+    usrId: string,
+    ctx?: TransactionContext,
+  ): Promise<CuentaModel | null> {
+    const repo = this.getRepository(ctx);
+    const entity = await repo.findOne({
+      where: { ctaId, ctaUsrId: usrId },
+    });
+
+    return entity ? this.persistenceMapper.toDomain(entity) : null;
+  }
+
+  async findSubcuentasByPadreId(
+    padreId: string,
+    usrId: string,
+    ctx?: TransactionContext,
+  ): Promise<CuentaModel[]> {
+    const repo = this.getRepository(ctx);
+    const entities = await repo.find({
+      where: { ctaCtaPadreId: padreId, ctaUsrId: usrId },
+      order: { ctaCreadoEn: 'ASC', ctaNombre: 'ASC' },
+    });
+
+    return entities.map((entity) => this.persistenceMapper.toDomain(entity));
+  }
 }

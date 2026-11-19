@@ -9,7 +9,7 @@ import { CuentasRepository } from './cuentas.repository';
 describe('CuentasRepository', () => {
   let repository: CuentasRepository;
   let typeOrmRepo: jest.Mocked<
-    Pick<Repository<CuentaEntity>, 'create' | 'save' | 'find'>
+    Pick<Repository<CuentaEntity>, 'create' | 'save' | 'find' | 'findOne'>
   >;
 
   beforeEach(async () => {
@@ -17,6 +17,7 @@ describe('CuentasRepository', () => {
       create: jest.fn(),
       save: jest.fn(),
       find: jest.fn(),
+      findOne: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -144,5 +145,72 @@ describe('CuentasRepository', () => {
       where: { ctaUsrId: usrId },
       order: { ctaCreadoEn: 'ASC', ctaNombre: 'ASC' },
     });
+  });
+
+  it('findByIdAndUsuario retorna CuentaModel cuando existe para ese usuario', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const ctaId = 'cta-1';
+    const entity = Object.assign(new CuentaEntity(), {
+      ctaId,
+      ctaUsrId: usrId,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO' as const,
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 100,
+      ctaSaldoActual: 100,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+    typeOrmRepo.findOne.mockResolvedValue(entity);
+
+    const result = await repository.findByIdAndUsuario(ctaId, usrId);
+
+    expect(typeOrmRepo.findOne).toHaveBeenCalledWith({
+      where: { ctaId, ctaUsrId: usrId },
+    });
+    expect(result).not.toBeNull();
+    expect(result).not.toBeInstanceOf(CuentaEntity);
+    expect(result?.ctaId).toBe(ctaId);
+  });
+
+  it('findByIdAndUsuario retorna null cuando no existe o pertenece a otro usuario', async () => {
+    typeOrmRepo.findOne.mockResolvedValue(null);
+
+    const result = await repository.findByIdAndUsuario('cta-x', 'usr-x');
+
+    expect(result).toBeNull();
+  });
+
+  it('findSubcuentasByPadreId consulta por ctaCtaPadreId y ctaUsrId con orden determinístico', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const padreId = 'padre-1';
+    const entity = Object.assign(new CuentaEntity(), {
+      ctaId: 'sub-1',
+      ctaUsrId: usrId,
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Viaje',
+      ctaSaldoInicial: 50,
+      ctaSaldoActual: 50,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:05:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:05:00.000Z',
+    });
+    typeOrmRepo.find.mockResolvedValue([entity]);
+
+    const result = await repository.findSubcuentasByPadreId(padreId, usrId);
+
+    expect(typeOrmRepo.find).toHaveBeenCalledWith({
+      where: { ctaCtaPadreId: padreId, ctaUsrId: usrId },
+      order: { ctaCreadoEn: 'ASC', ctaNombre: 'ASC' },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toBeInstanceOf(CuentaEntity);
+    expect(result[0].ctaCtaPadreId).toBe(padreId);
   });
 });
