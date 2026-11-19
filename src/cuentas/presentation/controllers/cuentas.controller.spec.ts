@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { CuentasService } from '../../application/services/cuentas.service';
 import { CreateCuentaRequest } from '../dto/request/create-cuenta.request';
+import { CreateSubcuentaRequest } from '../dto/request/create-subcuenta.request';
 import { ListarCuentasQueryRequest } from '../dto/request/listar-cuentas-query.request';
 import { CuentaJerarquicaResponse } from '../dto/response/cuenta-jerarquica.response';
 import { CuentaResponse } from '../dto/response/cuenta.response';
@@ -10,7 +11,13 @@ import { CuentasController } from './cuentas.controller';
 describe('CuentasController', () => {
   let controller: CuentasController;
   let service: jest.Mocked<
-    Pick<CuentasService, 'crearCuentaPrincipal' | 'listarCuentas'>
+    Pick<
+      CuentasService,
+      | 'crearCuentaPrincipal'
+      | 'listarCuentas'
+      | 'crearSubcuenta'
+      | 'obtenerDetalleCuenta'
+    >
   >;
 
   const authUser: AuthenticatedUser = {
@@ -22,6 +29,8 @@ describe('CuentasController', () => {
     service = {
       crearCuentaPrincipal: jest.fn(),
       listarCuentas: jest.fn(),
+      crearSubcuenta: jest.fn(),
+      obtenerDetalleCuenta: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -90,5 +99,62 @@ describe('CuentasController', () => {
     await controller.listar(authUser, query);
 
     expect(service.listarCuentas).toHaveBeenCalledWith(authUser.usrId, false);
+  });
+
+  it('crearSubcuenta delega en CuentasService.crearSubcuenta usando usrId del JWT y padreId', async () => {
+    const padreId = '00000000-0000-4000-8000-000000000001';
+    const dto: CreateSubcuentaRequest = {
+      ctaNombre: 'Bolsillo Vacaciones',
+      ctaSaldoInicial: 25000,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+    };
+    const expected = Object.assign(new CuentaResponse(), {
+      ctaId: 'sub-1',
+      ctaUsrId: authUser.usrId,
+      ctaCtaPadreId: padreId,
+      ctaNaturaleza: null,
+      ctaNombre: 'Bolsillo Vacaciones',
+      ctaSaldoInicial: 25000,
+      ctaSaldoActual: 25000,
+      ctaColor: '#0EA5E9',
+      ctaIcono: 'piggy-bank',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:05:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:05:00.000Z',
+    });
+
+    service.crearSubcuenta.mockResolvedValue(expected);
+
+    const result = await controller.crearSubcuenta(authUser, padreId, dto);
+
+    expect(service.crearSubcuenta).toHaveBeenCalledWith(
+      authUser.usrId,
+      padreId,
+      dto,
+    );
+    expect(result).toBe(expected);
+  });
+
+  it('obtenerDetalle delega en CuentasService.obtenerDetalleCuenta usando usrId del JWT e id', async () => {
+    const ctaId = '00000000-0000-4000-8000-000000000001';
+    const expected = Object.assign(new CuentaJerarquicaResponse(), {
+      ctaId,
+      ctaUsrId: authUser.usrId,
+      saldoPropio: 100000,
+      saldoSubcuentas: 25000,
+      saldoConsolidado: 125000,
+      subcuentas: [],
+    });
+
+    service.obtenerDetalleCuenta.mockResolvedValue(expected);
+
+    const result = await controller.obtenerDetalle(authUser, ctaId);
+
+    expect(service.obtenerDetalleCuenta).toHaveBeenCalledWith(
+      authUser.usrId,
+      ctaId,
+    );
+    expect(result).toBe(expected);
   });
 });
