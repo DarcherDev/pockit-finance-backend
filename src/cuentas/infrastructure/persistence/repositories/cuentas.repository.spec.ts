@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import type { TransactionContext } from '../../../../common/domain';
 import { CuentaEntity } from '../entities/cuenta.entity';
 import { CuentaPersistenceMapper } from '../mappers/cuenta-persistence.mapper';
@@ -212,5 +212,206 @@ describe('CuentasRepository', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).not.toBeInstanceOf(CuentaEntity);
     expect(result[0].ctaCtaPadreId).toBe(padreId);
+  });
+
+  it('findByIdAndUsuarioForUpdate bloquea la fila con pessimistic_write usando QueryBuilder del ctx', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const ctaId = 'cta-1';
+    const entity = Object.assign(new CuentaEntity(), {
+      ctaId,
+      ctaUsrId: usrId,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO' as const,
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 100,
+      ctaSaldoActual: 150,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+
+    const qbMock = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(entity),
+    };
+    const managerRepoMock = {
+      createQueryBuilder: jest.fn().mockReturnValue(qbMock),
+    };
+    const managerMock = {
+      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+    } as unknown as EntityManager;
+
+    const result = await repository.findByIdAndUsuarioForUpdate(
+      ctaId,
+      usrId,
+      managerMock as unknown as TransactionContext,
+    );
+
+    expect(qbMock.where).toHaveBeenCalledWith('cta.cta_id = :ctaId', { ctaId });
+    expect(qbMock.andWhere).toHaveBeenCalledWith('cta.cta_usr_id = :usrId', {
+      usrId,
+    });
+    expect(qbMock.setLock).toHaveBeenCalledWith('pessimistic_write');
+    expect(result?.ctaId).toBe(ctaId);
+  });
+
+  it('findCuentaYSubcuentasForUpdate bloquea padre e hijas en orden determinístico cta_id ASC', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const ctaId = 'cta-1';
+    const entity = Object.assign(new CuentaEntity(), {
+      ctaId,
+      ctaUsrId: usrId,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO' as const,
+      ctaNombre: 'Bancolombia',
+      ctaSaldoInicial: 100,
+      ctaSaldoActual: 150,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T10:00:00.000Z',
+    });
+
+    const qbMock = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([entity]),
+    };
+    const managerRepoMock = {
+      createQueryBuilder: jest.fn().mockReturnValue(qbMock),
+    };
+    const managerMock = {
+      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+    } as unknown as EntityManager;
+
+    const result = await repository.findCuentaYSubcuentasForUpdate(
+      ctaId,
+      usrId,
+      managerMock as unknown as TransactionContext,
+    );
+
+    expect(qbMock.where).toHaveBeenCalledWith('cta.cta_usr_id = :usrId', {
+      usrId,
+    });
+    expect(qbMock.andWhere).toHaveBeenCalledWith(
+      '(cta.cta_id = :ctaId OR cta.cta_cta_padre_id = :ctaId)',
+      { ctaId },
+    );
+    expect(qbMock.orderBy).toHaveBeenCalledWith('cta.cta_id', 'ASC');
+    expect(qbMock.setLock).toHaveBeenCalledWith('pessimistic_write');
+    expect(result).toHaveLength(1);
+  });
+
+  it('updateById actualiza los campos indicados y retorna el CuentaModel actualizado', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const ctaId = 'cta-1';
+    const updatedEntity = Object.assign(new CuentaEntity(), {
+      ctaId,
+      ctaUsrId: usrId,
+      ctaCtaPadreId: null,
+      ctaNaturaleza: 'BANCO' as const,
+      ctaNombre: 'Nuevo Nombre',
+      ctaSaldoInicial: 140,
+      ctaSaldoActual: 190,
+      ctaColor: '#0F172A',
+      ctaIcono: 'landmark',
+      ctaActiva: true,
+      ctaCreadoEn: '2026-11-19T10:00:00.000Z',
+      ctaActualizadoEn: '2026-11-19T11:00:00.000Z',
+    });
+
+    const managerRepoMock = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      findOneOrFail: jest.fn().mockResolvedValue(updatedEntity),
+    };
+    const managerMock = {
+      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+    } as unknown as EntityManager;
+
+    const result = await repository.updateById(
+      ctaId,
+      usrId,
+      { ctaNombre: 'Nuevo Nombre', ctaSaldoInicial: 140, ctaSaldoActual: 190 },
+      managerMock as unknown as TransactionContext,
+    );
+
+    expect(managerRepoMock.update).toHaveBeenCalledWith(
+      { ctaId, ctaUsrId: usrId },
+      { ctaNombre: 'Nuevo Nombre', ctaSaldoInicial: 140, ctaSaldoActual: 190 },
+    );
+    expect(managerRepoMock.findOneOrFail).toHaveBeenCalledWith({
+      where: { ctaId, ctaUsrId: usrId },
+    });
+    expect(result.ctaNombre).toBe('Nuevo Nombre');
+    expect(result.ctaSaldoActual).toBe(190);
+  });
+
+  it('contarTransaccionesPorCuentas ejecuta SQL parametrizado sobre public.transacciones', async () => {
+    const queryMock = jest
+      .fn()
+      .mockResolvedValue([{ total: 3, pendientes: 1 }]);
+    const managerMock = {
+      query: queryMock,
+    } as unknown as EntityManager;
+
+    const result = await repository.contarTransaccionesPorCuentas(
+      ['cta-1', 'sub-1'],
+      managerMock as unknown as TransactionContext,
+    );
+
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.stringContaining('FROM public.transacciones'),
+      [['cta-1', 'sub-1']],
+    );
+    expect(result).toEqual({ total: 3, pendientes: 1 });
+  });
+
+  it('desactivarCuentas marca ctaActiva=false para los ctaIds del usuario', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const managerRepoMock = {
+      update: jest.fn().mockResolvedValue({ affected: 2 }),
+    };
+    const managerMock = {
+      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+    } as unknown as EntityManager;
+
+    await repository.desactivarCuentas(
+      ['cta-1', 'sub-1'],
+      usrId,
+      managerMock as unknown as TransactionContext,
+    );
+
+    expect(managerRepoMock.update).toHaveBeenCalledWith(
+      { ctaUsrId: usrId, ctaId: In(['cta-1', 'sub-1']) },
+      { ctaActiva: false },
+    );
+  });
+
+  it('deleteByIdAndUsuario elimina físicamente la cuenta por ctaId y usrId', async () => {
+    const usrId = '550e8400-e29b-41d4-a716-446655440000';
+    const managerRepoMock = {
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    const managerMock = {
+      getRepository: jest.fn().mockReturnValue(managerRepoMock),
+    } as unknown as EntityManager;
+
+    await repository.deleteByIdAndUsuario(
+      'cta-1',
+      usrId,
+      managerMock as unknown as TransactionContext,
+    );
+
+    expect(managerRepoMock.delete).toHaveBeenCalledWith({
+      ctaId: 'cta-1',
+      ctaUsrId: usrId,
+    });
   });
 });
