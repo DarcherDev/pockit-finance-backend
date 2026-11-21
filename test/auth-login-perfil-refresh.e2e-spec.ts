@@ -10,7 +10,7 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { SupabaseAuthService } from './../src/auth/infrastructure/adapters/supabase-auth.service';
 import { configureApp } from './../src/common/bootstrap/configure-app';
-import { DomainException } from './../src/common/exceptions/domain.exception';
+import { DomainError } from './../src/common/domain';
 import { UsuariosService } from './../src/usuarios/application/services/usuarios.service';
 import { UsuarioResponse } from './../src/usuarios/presentation/dto/response/usuario.response';
 
@@ -120,7 +120,7 @@ describe('HU-02.2 Inicio de Sesión, Consulta de Perfil y Renovación de Token (
           return Promise.resolve(mockUsuario);
         }
         return Promise.reject(
-          new DomainException(
+          new DomainError(
             'USUARIO_NO_ENCONTRADO',
             'Usuario no encontrado.',
             HttpStatus.NOT_FOUND,
@@ -161,7 +161,7 @@ describe('HU-02.2 Inicio de Sesión, Consulta de Perfil y Renovación de Token (
         return Promise.resolve(mockUsuario);
       }
       return Promise.reject(
-        new DomainException(
+        new DomainError(
           'USUARIO_NO_ENCONTRADO',
           'Usuario no encontrado.',
           HttpStatus.NOT_FOUND,
@@ -227,7 +227,7 @@ describe('HU-02.2 Inicio de Sesión, Consulta de Perfil y Renovación de Token (
 
   it('POST /api/auth/login retorna 401 Unauthorized idéntico y genérico para contraseña incorrecta y correo inexistente', async () => {
     supabaseAuthMock.signInWithPassword.mockRejectedValue(
-      new DomainException(
+      new DomainError(
         'CREDENCIALES_INVALIDAS',
         'Credenciales inválidas.',
         HttpStatus.UNAUTHORIZED,
@@ -285,7 +285,7 @@ describe('HU-02.2 Inicio de Sesión, Consulta de Perfil y Renovación de Token (
 
   it('POST /api/auth/refresh retorna 401 Unauthorized TOKEN_REFRESH_INVALIDO para refresh token inválido/expirado', async () => {
     supabaseAuthMock.refreshSession.mockRejectedValue(
-      new DomainException(
+      new DomainError(
         'TOKEN_REFRESH_INVALIDO',
         'El token de renovación es inválido o ha expirado.',
         HttpStatus.UNAUTHORIZED,

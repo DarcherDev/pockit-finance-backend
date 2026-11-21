@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
-import type { TransactionContext } from '../../../../common/domain';
+import { createTransactionContext } from '../../../../database/typeorm-unit-of-work';
 import { CuentaEntity } from '../entities/cuenta.entity';
 import { CuentaPersistenceMapper } from '../mappers/cuenta-persistence.mapper';
 import { CuentasRepository } from './cuentas.repository';
@@ -97,7 +97,7 @@ describe('CuentasRepository', () => {
 
     const result = await repository.create(
       params,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(getRepositoryMock).toHaveBeenCalledWith(CuentaEntity);
@@ -248,7 +248,7 @@ describe('CuentasRepository', () => {
     const result = await repository.findByIdAndUsuarioForUpdate(
       ctaId,
       usrId,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(qbMock.where).toHaveBeenCalledWith('cta.cta_id = :ctaId', { ctaId });
@@ -294,7 +294,7 @@ describe('CuentasRepository', () => {
     const result = await repository.findCuentaYSubcuentasForUpdate(
       ctaId,
       usrId,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(qbMock.where).toHaveBeenCalledWith('cta.cta_usr_id = :usrId', {
@@ -339,7 +339,7 @@ describe('CuentasRepository', () => {
       ctaId,
       usrId,
       { ctaNombre: 'Nuevo Nombre', ctaSaldoInicial: 140, ctaSaldoActual: 190 },
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(managerRepoMock.update).toHaveBeenCalledWith(
@@ -363,7 +363,7 @@ describe('CuentasRepository', () => {
 
     const result = await repository.contarTransaccionesPorCuentas(
       ['cta-1', 'sub-1'],
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(queryMock).toHaveBeenCalledWith(
@@ -385,7 +385,7 @@ describe('CuentasRepository', () => {
     await repository.desactivarCuentas(
       ['cta-1', 'sub-1'],
       usrId,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(managerRepoMock.update).toHaveBeenCalledWith(
@@ -406,7 +406,7 @@ describe('CuentasRepository', () => {
     await repository.deleteByIdAndUsuario(
       'cta-1',
       usrId,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(managerRepoMock.delete).toHaveBeenCalledWith({

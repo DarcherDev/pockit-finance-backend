@@ -115,7 +115,7 @@ describe('UsuariosService', () => {
   });
 
   it('create crea el usuario con TransactionContext opcional y retorna UsuarioResponse', async () => {
-    const tx: TransactionContext = {};
+    const tx = {} as TransactionContext;
     const payload = {
       usrId: '550e8400-e29b-41d4-a716-446655440000',
       usrCorreo: 'ana@pockit.finance',

@@ -5,7 +5,7 @@ import { generateKeyPairSync } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
-import { DomainException } from '../../../common/exceptions/domain.exception';
+import { DomainError } from '../../../common/domain';
 import { UsuariosService } from '../../../usuarios/application/services/usuarios.service';
 import { UsuarioResponse } from '../../../usuarios/presentation/dto/response/usuario.response';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -147,7 +147,7 @@ describe('SupabaseJwtGuard', () => {
     });
   });
 
-  it('rechaza con 401 DomainException cuando falta el header Authorization', async () => {
+  it('rechaza con 401 DomainError cuando falta el header Authorization', async () => {
     const { context } = createMockContext();
 
     await expect(guard.canActivate(context)).rejects.toMatchObject({
@@ -156,12 +156,12 @@ describe('SupabaseJwtGuard', () => {
   });
 
   it.each(['Basic abc123', 'Bearer', 'Bearer   ', 'Token abc'])(
-    'rechaza con 401 DomainException cuando el header Authorization es "%s"',
+    'rechaza con 401 DomainError cuando el header Authorization es "%s"',
     async (header) => {
       const { context } = createMockContext(header);
 
       await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
-        DomainException,
+        DomainError,
       );
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         status: HttpStatus.UNAUTHORIZED,
@@ -169,7 +169,7 @@ describe('SupabaseJwtGuard', () => {
     },
   );
 
-  it('rechaza con 401 DomainException cuando la firma del token es inválida', async () => {
+  it('rechaza con 401 DomainError cuando la firma del token es inválida', async () => {
     const token = signToken(
       { sub: validUsrId, email: 'ana@pockit.finance' },
       {},
@@ -183,7 +183,7 @@ describe('SupabaseJwtGuard', () => {
     });
   });
 
-  it('rechaza con 401 DomainException cuando el token está expirado', async () => {
+  it('rechaza con 401 DomainError cuando el token está expirado', async () => {
     const token = signToken(
       { sub: validUsrId, email: 'ana@pockit.finance' },
       { expiresIn: -10 },
@@ -196,7 +196,7 @@ describe('SupabaseJwtGuard', () => {
     });
   });
 
-  it('rechaza con 401 DomainException cuando aud es inválido', async () => {
+  it('rechaza con 401 DomainError cuando aud es inválido', async () => {
     const token = signToken(
       { sub: validUsrId, email: 'ana@pockit.finance' },
       { audience: 'anon' },
@@ -209,7 +209,7 @@ describe('SupabaseJwtGuard', () => {
     });
   });
 
-  it('rechaza con 401 DomainException cuando iss es inválido', async () => {
+  it('rechaza con 401 DomainError cuando iss es inválido', async () => {
     const token = signToken(
       { sub: validUsrId, email: 'ana@pockit.finance' },
       { issuer: 'https://otro-proyecto.supabase.co/auth/v1' },
@@ -222,7 +222,7 @@ describe('SupabaseJwtGuard', () => {
     });
   });
 
-  it('rechaza con 401 DomainException cuando falta sub en el payload', async () => {
+  it('rechaza con 401 DomainError cuando falta sub en el payload', async () => {
     const token = signToken({ email: 'ana@pockit.finance' });
     const { context } = createMockContext(`Bearer ${token}`);
 
@@ -232,7 +232,7 @@ describe('SupabaseJwtGuard', () => {
     });
   });
 
-  it('rechaza con 401 DomainException cuando el usuario no existe en public.usuarios', async () => {
+  it('rechaza con 401 DomainError cuando el usuario no existe en public.usuarios', async () => {
     usuariosService.findById.mockResolvedValue(null);
     const token = signToken({ sub: validUsrId, email: 'ana@pockit.finance' });
     const { context } = createMockContext(`Bearer ${token}`);

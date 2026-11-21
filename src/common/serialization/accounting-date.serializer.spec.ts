@@ -61,5 +61,20 @@ describe('accounting-date.serializer', () => {
 
       expect(dto.fecha).toBe('2026-05-10');
     });
+
+    it('preserva entradas inválidas sin lanzar Error para que ValidationPipe responda 400', () => {
+      expect(
+        plainToInstance(TestDateDto, { fecha: '2026-02-30' }).fecha,
+      ).toBe('2026-02-30');
+      expect(plainToInstance(TestDateDto, { fecha: 'invalid' }).fecha).toBe(
+        'invalid',
+      );
+      const invalidDate = new Date('invalid');
+      const parsed = plainToInstance(TestDateDto, {
+        fecha: invalidDate,
+      }).fecha;
+      expect(parsed).toBeInstanceOf(Date);
+      expect(Number.isNaN((parsed as unknown as Date).getTime())).toBe(true);
+    });
   });
 });

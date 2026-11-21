@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DomainError } from '../domain/domain.error';
-import { DomainException } from '../exceptions/domain.exception';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 describe('AllExceptionsFilter', () => {
@@ -41,25 +40,6 @@ describe('AllExceptionsFilter', () => {
       code: 'CORREO_YA_REGISTRADO',
       message: 'El correo ya existe',
       details: { field: 'correo' },
-    });
-  });
-
-  it('formatea DomainException con { statusCode, code, message, details }', () => {
-    const exception = new DomainException(
-      'DATABASE_UNAVAILABLE',
-      'La base de datos no responde',
-      HttpStatus.SERVICE_UNAVAILABLE,
-      { database: 'down' },
-    );
-
-    filter.catch(exception, host);
-
-    expect(statusMock).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
-    expect(jsonMock).toHaveBeenCalledWith({
-      statusCode: 503,
-      code: 'DATABASE_UNAVAILABLE',
-      message: 'La base de datos no responde',
-      details: { database: 'down' },
     });
   });
 

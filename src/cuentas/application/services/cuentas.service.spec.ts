@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  DomainError,
   type TransactionContext,
   UNIT_OF_WORK_PORT,
   type UnitOfWorkPort,
 } from '../../../common/domain';
-import { DomainException } from '../../../common/exceptions/domain.exception';
 import type { CuentaModel } from '../../domain/model/cuenta.model';
 import {
   CUENTAS_REPOSITORY_PORT,
@@ -314,7 +314,7 @@ describe('CuentasService', () => {
     );
   });
 
-  it('crearSubcuenta lanza DomainException 404 CUENTA_NO_ENCONTRADA cuando el padre no existe', async () => {
+  it('crearSubcuenta lanza DomainError 404 CUENTA_NO_ENCONTRADA cuando el padre no existe', async () => {
     findByIdAndUsuarioMock.mockResolvedValue(null);
 
     await expect(
@@ -329,7 +329,7 @@ describe('CuentasService', () => {
     });
   });
 
-  it('crearSubcuenta lanza DomainException 422 JERARQUIA_MAXIMA_EXCEDIDA si el padre ya es subcuenta', async () => {
+  it('crearSubcuenta lanza DomainError 422 JERARQUIA_MAXIMA_EXCEDIDA si el padre ya es subcuenta', async () => {
     findByIdAndUsuarioMock.mockResolvedValue({
       ctaId: 'sub-1',
       ctaUsrId: USR_ID,
@@ -351,7 +351,7 @@ describe('CuentasService', () => {
       ctaIcono: 'piggy-bank',
     });
 
-    await expect(promise).rejects.toBeInstanceOf(DomainException);
+    await expect(promise).rejects.toBeInstanceOf(DomainError);
     await expect(promise).rejects.toMatchObject({
       code: 'JERARQUIA_MAXIMA_EXCEDIDA',
       status: 422,
@@ -359,7 +359,7 @@ describe('CuentasService', () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
-  it('crearSubcuenta lanza DomainException 422 CUENTA_PADRE_INACTIVA si la cuenta padre está inactiva', async () => {
+  it('crearSubcuenta lanza DomainError 422 CUENTA_PADRE_INACTIVA si la cuenta padre está inactiva', async () => {
     findByIdAndUsuarioMock.mockResolvedValue({
       ctaId: 'padre-inactivo',
       ctaUsrId: USR_ID,
@@ -381,7 +381,7 @@ describe('CuentasService', () => {
       ctaIcono: 'piggy-bank',
     });
 
-    await expect(promise).rejects.toBeInstanceOf(DomainException);
+    await expect(promise).rejects.toBeInstanceOf(DomainError);
     await expect(promise).rejects.toMatchObject({
       code: 'CUENTA_PADRE_INACTIVA',
       status: 422,
@@ -447,7 +447,7 @@ describe('CuentasService', () => {
     expect(result.subcuentas).toHaveLength(2);
   });
 
-  it('obtenerDetalleCuenta lanza DomainException 404 CUENTA_NO_ENCONTRADA si no existe o pertenece a otro usuario', async () => {
+  it('obtenerDetalleCuenta lanza DomainError 404 CUENTA_NO_ENCONTRADA si no existe o pertenece a otro usuario', async () => {
     findByIdAndUsuarioMock.mockResolvedValue(null);
 
     await expect(

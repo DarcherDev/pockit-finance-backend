@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
-import { DomainException } from '../../../common/exceptions/domain.exception';
+import { DomainError } from '../../../common/domain';
 import type {
   AuthProviderUser,
   AuthSession,
@@ -57,14 +57,14 @@ export class SupabaseAuthService implements AuthProviderPort {
 
     if (error) {
       if (error.code === 'email_exists') {
-        throw new DomainException(
+        throw new DomainError(
           'CORREO_YA_REGISTRADO',
           'El correo electrónico ya se encuentra registrado',
           HttpStatus.CONFLICT,
         );
       }
 
-      throw new DomainException(
+      throw new DomainError(
         'AUTH_PROVIDER_ERROR',
         'No se pudo crear el usuario en el proveedor de autenticación',
         HttpStatus.BAD_GATEWAY,
@@ -73,7 +73,7 @@ export class SupabaseAuthService implements AuthProviderPort {
     }
 
     if (!data.user?.id) {
-      throw new DomainException(
+      throw new DomainError(
         'AUTH_PROVIDER_ERROR',
         'El proveedor de autenticación no devolvió un usuario válido',
         HttpStatus.BAD_GATEWAY,
@@ -90,7 +90,7 @@ export class SupabaseAuthService implements AuthProviderPort {
     const { error } = await this.supabase.auth.admin.deleteUser(userId);
 
     if (error) {
-      throw new DomainException(
+      throw new DomainError(
         'AUTH_PROVIDER_ERROR',
         'No se pudo eliminar el usuario en el proveedor de autenticación',
         HttpStatus.BAD_GATEWAY,
@@ -109,7 +109,7 @@ export class SupabaseAuthService implements AuthProviderPort {
     });
 
     if (error || !data.session || !data.user?.id) {
-      throw new DomainException(
+      throw new DomainError(
         'CREDENCIALES_INVALIDAS',
         'Credenciales inválidas.',
         HttpStatus.UNAUTHORIZED,
@@ -130,7 +130,7 @@ export class SupabaseAuthService implements AuthProviderPort {
     });
 
     if (error || !data.session) {
-      throw new DomainException(
+      throw new DomainError(
         'TOKEN_REFRESH_INVALIDO',
         'El token de renovación es inválido o ha expirado.',
         HttpStatus.UNAUTHORIZED,
@@ -167,7 +167,7 @@ export class SupabaseAuthService implements AuthProviderPort {
     const { data, error } = await this.supabasePublic.auth.getUser(accessToken);
 
     if (error || !data.user?.id) {
-      throw new DomainException(
+      throw new DomainError(
         'TOKEN_RECUPERACION_INVALIDO',
         'El token de recuperación es inválido o ha expirado.',
         HttpStatus.UNAUTHORIZED,
@@ -181,14 +181,14 @@ export class SupabaseAuthService implements AuthProviderPort {
 
     if (updateError) {
       if (updateError.status === 401) {
-        throw new DomainException(
+        throw new DomainError(
           'TOKEN_RECUPERACION_INVALIDO',
           'El token de recuperación es inválido o ha expirado.',
           HttpStatus.UNAUTHORIZED,
         );
       }
 
-      throw new DomainException(
+      throw new DomainError(
         'AUTH_PROVIDER_ERROR',
         'No se pudo actualizar la contraseña en el proveedor de autenticación',
         HttpStatus.BAD_GATEWAY,

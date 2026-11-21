@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import type { TransactionContext } from '../../../../common/domain';
+import { createTransactionContext } from '../../../../database/typeorm-unit-of-work';
 import { CategoriaEntity } from '../entities/categoria.entity';
 import { CategoriaPersistenceMapper } from '../mappers/categoria-persistence.mapper';
 import { CategoriasRepository } from './categorias.repository';
@@ -96,7 +96,7 @@ describe('CategoriasRepository', () => {
 
     const result = await repository.createMany(
       items,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(getRepositoryMock).toHaveBeenCalledWith(CategoriaEntity);

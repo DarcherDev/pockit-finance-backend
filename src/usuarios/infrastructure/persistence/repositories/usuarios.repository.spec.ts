@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import type { TransactionContext } from '../../../../common/domain';
+import { createTransactionContext } from '../../../../database/typeorm-unit-of-work';
 import { UsuarioEntity } from '../entities/usuario.entity';
 import { UsuarioPersistenceMapper } from '../mappers/usuario-persistence.mapper';
 import { UsuariosRepository } from './usuarios.repository';
@@ -144,7 +144,7 @@ describe('UsuariosRepository', () => {
 
     const result = await repository.create(
       data,
-      managerMock as unknown as TransactionContext,
+      createTransactionContext(managerMock),
     );
 
     expect(getRepositoryMock).toHaveBeenCalledWith(UsuarioEntity);

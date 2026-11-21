@@ -58,7 +58,7 @@ describe('AuthService', () => {
   let txContextMock: TransactionContext;
 
   beforeEach(async () => {
-    txContextMock = {};
+    txContextMock = {} as TransactionContext;
 
     createUserMock = jest.fn<
       Promise<AuthProviderUser>,

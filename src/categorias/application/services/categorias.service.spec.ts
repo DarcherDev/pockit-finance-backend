@@ -43,7 +43,7 @@ describe('CategoriasService', () => {
 
   it('crearCategoriasSistema crea Transferencia Saliente (GASTO) y Transferencia Entrante (INGRESO) con TransactionContext', async () => {
     const usrId = '550e8400-e29b-41d4-a716-446655440000';
-    const tx: TransactionContext = {};
+    const tx = {} as TransactionContext;
 
     const createdCategorias: Categoria[] = [
       {
