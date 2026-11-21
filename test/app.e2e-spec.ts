@@ -14,7 +14,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/common/bootstrap/configure-app';
-import { DomainException } from './../src/common/exceptions/domain.exception';
+import { DomainError } from './../src/common/domain';
 import { HealthService } from './../src/health/application/services/health.service';
 import { HEALTH_PROBE_PORT } from './../src/health/domain/ports/out/health-probe.port';
 import { HealthController } from './../src/health/presentation/controllers/health.controller';
@@ -42,7 +42,7 @@ class QaIntegrationController {
 
   @Get('domain-error')
   domainError(): never {
-    throw new DomainException(
+    throw new DomainError(
       'QA_DOMAIN_ERROR',
       'Regla de dominio violada',
       HttpStatus.UNPROCESSABLE_ENTITY,
@@ -286,7 +286,7 @@ describe('HU-01.1 Bootstrap & Health (e2e)', () => {
       expect(Array.isArray(body.details)).toBe(true);
     });
 
-    it('AllExceptionsFilter formatea DomainException con { statusCode, code, message, details }', async () => {
+    it('AllExceptionsFilter formatea DomainError con { statusCode, code, message, details }', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/__qa-test__/domain-error')
         .expect(422);

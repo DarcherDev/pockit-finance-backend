@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { DomainException } from '../exceptions/domain.exception';
+import { DomainError } from '../domain';
 import { assertResourceOwnership } from './resource-ownership.util';
 
 describe('assertResourceOwnership', () => {
@@ -10,32 +10,28 @@ describe('assertResourceOwnership', () => {
     expect(() => assertResourceOwnership(ownerId, ownerId)).not.toThrow();
   });
 
-  it('lanza DomainException 403 RECURSO_NO_AUTORIZADO cuando los IDs no coinciden', () => {
+  it('lanza DomainError 403 RECURSO_NO_AUTORIZADO cuando los IDs no coinciden', () => {
     expect(() => assertResourceOwnership(ownerId, otherId)).toThrow(
-      DomainException,
+      DomainError,
     );
 
     try {
       assertResourceOwnership(ownerId, otherId);
     } catch (error) {
-      expect(error).toBeInstanceOf(DomainException);
-      const domainError = error as DomainException;
-      expect(domainError.getStatus()).toBe(HttpStatus.FORBIDDEN);
+      expect(error).toBeInstanceOf(DomainError);
+      const domainError = error as DomainError;
+      expect(domainError.statusCode).toBe(HttpStatus.FORBIDDEN);
       expect(domainError.code).toBe('RECURSO_NO_AUTORIZADO');
     }
   });
 
-  it('lanza DomainException 403 cuando ownerUsrId está vacío', () => {
-    expect(() => assertResourceOwnership('', ownerId)).toThrow(DomainException);
-    expect(() => assertResourceOwnership('   ', ownerId)).toThrow(
-      DomainException,
-    );
+  it('lanza DomainError 403 cuando ownerUsrId está vacío', () => {
+    expect(() => assertResourceOwnership('', ownerId)).toThrow(DomainError);
+    expect(() => assertResourceOwnership('   ', ownerId)).toThrow(DomainError);
   });
 
-  it('lanza DomainException 403 cuando currentUsrId está vacío', () => {
-    expect(() => assertResourceOwnership(ownerId, '')).toThrow(DomainException);
-    expect(() => assertResourceOwnership(ownerId, '   ')).toThrow(
-      DomainException,
-    );
+  it('lanza DomainError 403 cuando currentUsrId está vacío', () => {
+    expect(() => assertResourceOwnership(ownerId, '')).toThrow(DomainError);
+    expect(() => assertResourceOwnership(ownerId, '   ')).toThrow(DomainError);
   });
 });

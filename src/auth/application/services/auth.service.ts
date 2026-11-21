@@ -1,16 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CategoriasService } from '../../../categorias/application/services/categorias.service';
+import { extractBearerToken } from '../../../common/auth/bearer-token.util';
 import { DomainError, UNIT_OF_WORK_PORT } from '../../../common/domain';
 import type { UnitOfWorkPort } from '../../../common/domain';
 import { UsuarioResponse } from '../../../usuarios/presentation/dto/response/usuario.response';
 import { UsuariosService } from '../../../usuarios/application/services/usuarios.service';
 import { AUTH_PROVIDER_PORT } from '../../domain/ports/out/auth-provider.port';
 import type { AuthProviderPort } from '../../domain/ports/out/auth-provider.port';
-import {
-  extractRecoveryBearerToken,
-  normalizeEmail,
-} from '../../domain/rules/auth-credentials.rules';
+import { normalizeEmail } from '../../domain/rules/auth-credentials.rules';
 import {
   LoginRequest,
   LoginResponse,
@@ -130,7 +128,12 @@ export class AuthService {
     authorizationHeader: string | undefined,
     dto: RestablecerPasswordRequest,
   ): Promise<MensajeResponse> {
-    const token = extractRecoveryBearerToken(authorizationHeader);
+    const token = extractBearerToken(authorizationHeader, {
+      missingCode: 'TOKEN_RECUPERACION_INVALIDO',
+      missingMessage: 'El token de recuperación es inválido o ha expirado.',
+      invalidCode: 'TOKEN_RECUPERACION_INVALIDO',
+      invalidMessage: 'El token de recuperación es inválido o ha expirado.',
+    });
 
     await this.authProvider.updatePasswordWithRecoveryToken(
       token,

@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { DomainError } from '../domain/domain.error';
-import { DomainException } from '../exceptions/domain.exception';
 
 interface ErrorResponseBody {
   statusCode: number;
@@ -43,15 +42,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof DomainError) {
       return {
         statusCode: exception.statusCode,
-        code: exception.code,
-        message: exception.message,
-        details: exception.details ?? null,
-      };
-    }
-
-    if (exception instanceof DomainException) {
-      return {
-        statusCode: exception.getStatus(),
         code: exception.code,
         message: exception.message,
         details: exception.details ?? null,

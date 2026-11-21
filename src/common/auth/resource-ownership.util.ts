@@ -1,9 +1,8 @@
-import { HttpStatus } from '@nestjs/common';
-import { DomainException } from '../exceptions/domain.exception';
+import { DomainError } from '../domain';
 
 /**
  * Verifica que el recurso pertenezca al usuario autenticado en curso.
- * Lanza `DomainException` 403 Forbidden cuando el propietario no coincide o algún ID está vacío.
+ * Lanza `DomainError` 403 Forbidden cuando el propietario no coincide o algún ID está vacío.
  */
 export const assertResourceOwnership = (
   ownerUsrId: string,
@@ -17,10 +16,10 @@ export const assertResourceOwnership = (
     !normalizedCurrent ||
     normalizedOwner !== normalizedCurrent
   ) {
-    throw new DomainException(
+    throw new DomainError(
       'RECURSO_NO_AUTORIZADO',
       'No tienes permisos para acceder o modificar este recurso',
-      HttpStatus.FORBIDDEN,
+      403,
     );
   }
 };

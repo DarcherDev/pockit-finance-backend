@@ -23,9 +23,31 @@ const isValidCalendarDate = (
 };
 
 export const formatAccountingDate = (value: Date | string): string => {
+  const formatted = tryFormatAccountingDate(value);
+  if (formatted !== null) {
+    return formatted;
+  }
+
+  if (value instanceof Date) {
+    throw new Error('Fecha contable inválida: Date inválido');
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    throw ACCOUNTING_DATE_REGEX.test(trimmed)
+      ? new Error(`Fecha contable inexistente "${value}"`)
+      : new Error(
+          `Fecha contable inválida "${value}"; se esperaba formato YYYY-MM-DD`,
+        );
+  }
+
+  throw new Error('Fecha contable inválida; se esperaba Date o string');
+};
+
+const tryFormatAccountingDate = (value: unknown): string | null => {
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
-      throw new Error('Fecha contable inválida: Date inválido');
+      return null;
     }
 
     const year = value.getUTCFullYear();
@@ -38,22 +60,20 @@ export const formatAccountingDate = (value: Date | string): string => {
     const trimmed = value.trim();
     const match = ACCOUNTING_DATE_REGEX.exec(trimmed);
     if (!match) {
-      throw new Error(
-        `Fecha contable inválida "${value}"; se esperaba formato YYYY-MM-DD`,
-      );
+      return null;
     }
 
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
     if (!isValidCalendarDate(year, month, day)) {
-      throw new Error(`Fecha contable inexistente "${value}"`);
+      return null;
     }
 
     return trimmed;
   }
 
-  throw new Error('Fecha contable inválida; se esperaba Date o string');
+  return null;
 };
 
 export const accountingDateTransformer: ValueTransformer = {
@@ -79,9 +99,5 @@ export const TransformAccountingDate = (): PropertyDecorator =>
       return value;
     }
 
-    if (value instanceof Date || typeof value === 'string') {
-      return formatAccountingDate(value);
-    }
-
-    return value;
+    return tryFormatAccountingDate(value) ?? value;
   });

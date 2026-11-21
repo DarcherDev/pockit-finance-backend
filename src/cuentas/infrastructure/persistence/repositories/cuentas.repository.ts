@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOptionsWhere, In, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import type { TransactionContext } from '../../../../common/domain';
-import { extractEntityManager } from '../../../../database/typeorm-unit-of-work';
+import {
+  extractEntityManager,
+  resolveRepository,
+} from '../../../../database/typeorm-unit-of-work';
 import type {
   CreateCuentaParams,
   CuentaModel,
@@ -23,16 +26,11 @@ export class CuentasRepository implements CuentasRepositoryPort {
     private readonly persistenceMapper: CuentaPersistenceMapper,
   ) {}
 
-  private getRepository(ctx?: TransactionContext): Repository<CuentaEntity> {
-    const manager: EntityManager | undefined = extractEntityManager(ctx);
-    return manager ? manager.getRepository(CuentaEntity) : this.repository;
-  }
-
   async create(
     params: CreateCuentaParams,
     ctx?: TransactionContext,
   ): Promise<CuentaModel> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     const entity = repo.create(params);
     const saved = await repo.save(entity);
     return this.persistenceMapper.toDomain(saved);
@@ -43,7 +41,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     incluirInactivas: boolean,
     ctx?: TransactionContext,
   ): Promise<CuentaModel[]> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     const where: FindOptionsWhere<CuentaEntity> = incluirInactivas
       ? { ctaUsrId: usrId }
       : { ctaUsrId: usrId, ctaActiva: true };
@@ -61,7 +59,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     usrId: string,
     ctx?: TransactionContext,
   ): Promise<CuentaModel | null> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     const entity = await repo.findOne({
       where: { ctaId, ctaUsrId: usrId },
     });
@@ -74,7 +72,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     usrId: string,
     ctx?: TransactionContext,
   ): Promise<CuentaModel[]> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     const entities = await repo.find({
       where: { ctaCtaPadreId: padreId, ctaUsrId: usrId },
       order: { ctaCreadoEn: 'ASC', ctaNombre: 'ASC' },
@@ -88,7 +86,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     usrId: string,
     ctx: TransactionContext,
   ): Promise<CuentaModel | null> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     const entity = await repo
       .createQueryBuilder('cta')
       .where('cta.cta_id = :ctaId', { ctaId })
@@ -104,7 +102,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     usrId: string,
     ctx: TransactionContext,
   ): Promise<CuentaModel[]> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     const entities = await repo
       .createQueryBuilder('cta')
       .where('cta.cta_usr_id = :usrId', { usrId })
@@ -124,7 +122,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     data: UpdateCuentaData,
     ctx: TransactionContext,
   ): Promise<CuentaModel> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     if (Object.keys(data).length > 0) {
       await repo.update({ ctaId, ctaUsrId: usrId }, data);
     }
@@ -171,7 +169,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
       return;
     }
 
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     await repo.update(
       { ctaUsrId: usrId, ctaId: In(ctaIds) },
       { ctaActiva: false },
@@ -183,7 +181,7 @@ export class CuentasRepository implements CuentasRepositoryPort {
     usrId: string,
     ctx: TransactionContext,
   ): Promise<void> {
-    const repo = this.getRepository(ctx);
+    const repo = resolveRepository(this.repository, CuentaEntity, ctx);
     await repo.delete({ ctaId, ctaUsrId: usrId });
   }
 }

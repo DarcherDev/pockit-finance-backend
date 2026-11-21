@@ -6,7 +6,7 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { SupabaseAuthService } from './../src/auth/infrastructure/adapters/supabase-auth.service';
 import { configureApp } from './../src/common/bootstrap/configure-app';
-import { DomainException } from './../src/common/exceptions/domain.exception';
+import { DomainError } from './../src/common/domain';
 import { UsuariosService } from './../src/usuarios/application/services/usuarios.service';
 
 describe('HU-02.3 Recuperación y Restablecimiento de Contraseña por Correo (e2e)', () => {
@@ -176,7 +176,7 @@ describe('HU-02.3 Recuperación y Restablecimiento de Contraseña por Correo (e2
 
     it('retorna 401 Unauthorized cuando el token está expirado o ya fue usado', async () => {
       supabaseAuthMock.updatePasswordWithRecoveryToken.mockRejectedValue(
-        new DomainException(
+        new DomainError(
           'TOKEN_RECUPERACION_INVALIDO',
           'El token de recuperación es inválido o ha expirado.',
           HttpStatus.UNAUTHORIZED,

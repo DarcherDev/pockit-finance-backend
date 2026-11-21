@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import type { TransactionContext } from '../../../../common/domain';
-import { extractEntityManager } from '../../../../database/typeorm-unit-of-work';
+import { resolveRepository } from '../../../../database/typeorm-unit-of-work';
 import type {
   Categoria,
   CreateCategoriaData,
@@ -19,16 +19,11 @@ export class CategoriasRepository implements CategoriasRepositoryPort {
     private readonly persistenceMapper: CategoriaPersistenceMapper,
   ) {}
 
-  private getRepository(tx?: TransactionContext): Repository<CategoriaEntity> {
-    const manager: EntityManager | undefined = extractEntityManager(tx);
-    return manager ? manager.getRepository(CategoriaEntity) : this.repository;
-  }
-
   async createMany(
     items: CreateCategoriaData[],
     tx?: TransactionContext,
   ): Promise<Categoria[]> {
-    const repo = this.getRepository(tx);
+    const repo = resolveRepository(this.repository, CategoriaEntity, tx);
     const entities = items.map((item) => repo.create(item));
     const saved = await repo.save(entities);
     return saved.map((entity) => this.persistenceMapper.toDomain(entity));

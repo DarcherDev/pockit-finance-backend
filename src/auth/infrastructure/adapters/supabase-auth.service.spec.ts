@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createClient } from '@supabase/supabase-js';
-import { DomainException } from '../../../common/exceptions/domain.exception';
+import { DomainError } from '../../../common/domain';
 import { SupabaseAuthService } from './supabase-auth.service';
 
 jest.mock('@supabase/supabase-js', () => ({
@@ -138,7 +138,7 @@ describe('SupabaseAuthService', () => {
       });
     });
 
-    it('lanza DomainException 409 CORREO_YA_REGISTRADO cuando Supabase reporta email_exists', async () => {
+    it('lanza DomainError 409 CORREO_YA_REGISTRADO cuando Supabase reporta email_exists', async () => {
       adminMock.createUser.mockResolvedValue({
         data: { user: null },
         error: {
@@ -159,7 +159,7 @@ describe('SupabaseAuthService', () => {
       });
     });
 
-    it('lanza DomainException 502 AUTH_PROVIDER_ERROR cuando Supabase retorna otro error', async () => {
+    it('lanza DomainError 502 AUTH_PROVIDER_ERROR cuando Supabase retorna otro error', async () => {
       adminMock.createUser.mockResolvedValue({
         data: { user: null },
         error: {
@@ -173,14 +173,14 @@ describe('SupabaseAuthService', () => {
         password: 'Password123',
       });
 
-      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toBeInstanceOf(DomainError);
       await expect(promise).rejects.toMatchObject({
         code: 'AUTH_PROVIDER_ERROR',
         status: HttpStatus.BAD_GATEWAY,
       });
     });
 
-    it('lanza DomainException 502 AUTH_PROVIDER_ERROR cuando Supabase no devuelve usuario', async () => {
+    it('lanza DomainError 502 AUTH_PROVIDER_ERROR cuando Supabase no devuelve usuario', async () => {
       adminMock.createUser.mockResolvedValue({
         data: { user: null },
         error: null,
@@ -212,7 +212,7 @@ describe('SupabaseAuthService', () => {
       );
     });
 
-    it('lanza DomainException 502 AUTH_PROVIDER_ERROR si falla deleteUser', async () => {
+    it('lanza DomainError 502 AUTH_PROVIDER_ERROR si falla deleteUser', async () => {
       adminMock.deleteUser.mockResolvedValue({
         data: { user: null },
         error: { message: 'Delete failed', status: 500 },
@@ -261,7 +261,7 @@ describe('SupabaseAuthService', () => {
       });
     });
 
-    it('lanza DomainException 401 CREDENCIALES_INVALIDAS ante error de credenciales o email no confirmado', async () => {
+    it('lanza DomainError 401 CREDENCIALES_INVALIDAS ante error de credenciales o email no confirmado', async () => {
       publicAuthMock.signInWithPassword.mockResolvedValue({
         data: { user: null, session: null },
         error: {
@@ -275,7 +275,7 @@ describe('SupabaseAuthService', () => {
         'WrongPass',
       );
 
-      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toBeInstanceOf(DomainError);
       await expect(promise).rejects.toMatchObject({
         code: 'CREDENCIALES_INVALIDAS',
         message: 'Credenciales inválidas.',
@@ -283,7 +283,7 @@ describe('SupabaseAuthService', () => {
       });
     });
 
-    it('lanza DomainException 401 CREDENCIALES_INVALIDAS si no retorna sesión o usuario', async () => {
+    it('lanza DomainError 401 CREDENCIALES_INVALIDAS si no retorna sesión o usuario', async () => {
       publicAuthMock.signInWithPassword.mockResolvedValue({
         data: { user: null, session: null },
         error: null,
@@ -324,7 +324,7 @@ describe('SupabaseAuthService', () => {
       });
     });
 
-    it('lanza DomainException 401 TOKEN_REFRESH_INVALIDO cuando el refresh token es inválido o expiró', async () => {
+    it('lanza DomainError 401 TOKEN_REFRESH_INVALIDO cuando el refresh token es inválido o expiró', async () => {
       publicAuthMock.refreshSession.mockResolvedValue({
         data: { session: null },
         error: {
@@ -335,7 +335,7 @@ describe('SupabaseAuthService', () => {
 
       const promise = service.refreshSession('expired-refresh-token');
 
-      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toBeInstanceOf(DomainError);
       await expect(promise).rejects.toMatchObject({
         code: 'TOKEN_REFRESH_INVALIDO',
         message: 'El token de renovación es inválido o ha expirado.',
@@ -343,7 +343,7 @@ describe('SupabaseAuthService', () => {
       });
     });
 
-    it('lanza DomainException 401 TOKEN_REFRESH_INVALIDO cuando Supabase no retorna sesión', async () => {
+    it('lanza DomainError 401 TOKEN_REFRESH_INVALIDO cuando Supabase no retorna sesión', async () => {
       publicAuthMock.refreshSession.mockResolvedValue({
         data: { session: null },
         error: null,
@@ -433,7 +433,7 @@ describe('SupabaseAuthService', () => {
       );
     });
 
-    it('lanza DomainException 401 TOKEN_RECUPERACION_INVALIDO cuando getUser retorna error (token expirado o inválido)', async () => {
+    it('lanza DomainError 401 TOKEN_RECUPERACION_INVALIDO cuando getUser retorna error (token expirado o inválido)', async () => {
       publicAuthMock.getUser.mockResolvedValue({
         data: { user: null },
         error: {
@@ -447,7 +447,7 @@ describe('SupabaseAuthService', () => {
         'NewPassword123',
       );
 
-      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toBeInstanceOf(DomainError);
       await expect(promise).rejects.toMatchObject({
         code: 'TOKEN_RECUPERACION_INVALIDO',
         message: 'El token de recuperación es inválido o ha expirado.',
@@ -456,7 +456,7 @@ describe('SupabaseAuthService', () => {
       expect(adminMock.updateUserById).not.toHaveBeenCalled();
     });
 
-    it('lanza DomainException 401 TOKEN_RECUPERACION_INVALIDO cuando getUser no retorna usuario', async () => {
+    it('lanza DomainError 401 TOKEN_RECUPERACION_INVALIDO cuando getUser no retorna usuario', async () => {
       publicAuthMock.getUser.mockResolvedValue({
         data: { user: null },
         error: null,
@@ -475,7 +475,7 @@ describe('SupabaseAuthService', () => {
       expect(adminMock.updateUserById).not.toHaveBeenCalled();
     });
 
-    it('lanza DomainException 502 AUTH_PROVIDER_ERROR cuando admin.updateUserById falla', async () => {
+    it('lanza DomainError 502 AUTH_PROVIDER_ERROR cuando admin.updateUserById falla', async () => {
       publicAuthMock.getUser.mockResolvedValue({
         data: {
           user: {
@@ -497,7 +497,7 @@ describe('SupabaseAuthService', () => {
         'NewPassword123',
       );
 
-      await expect(promise).rejects.toBeInstanceOf(DomainException);
+      await expect(promise).rejects.toBeInstanceOf(DomainError);
       await expect(promise).rejects.toMatchObject({
         code: 'AUTH_PROVIDER_ERROR',
         status: HttpStatus.BAD_GATEWAY,

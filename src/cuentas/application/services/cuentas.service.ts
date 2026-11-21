@@ -1,10 +1,9 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   DomainError,
   UNIT_OF_WORK_PORT,
   type UnitOfWorkPort,
 } from '../../../common/domain';
-import { DomainException } from '../../../common/exceptions/domain.exception';
 import { roundMoney } from '../../../common/serialization/numeric-money.serializer';
 import type {
   CuentaModel,
@@ -83,7 +82,7 @@ export class CuentasService {
   ): Promise<CuentaResponse> {
     const padre = await this.obtenerCuentaDeUsuarioOrFail(usrId, padreId);
 
-    this.ejecutarReglaDominio(() => validarCreacionSubcuenta(padre));
+    validarCreacionSubcuenta(padre);
 
     const saldoInicial = roundMoney(dto.ctaSaldoInicial ?? 0);
 
@@ -132,9 +131,7 @@ export class CuentasService {
         throw this.crearCuentaNoEncontradaException();
       }
 
-      this.ejecutarReglaDominio(() =>
-        validarEdicionCuenta(cuenta, dto.ctaNaturaleza !== undefined),
-      );
+      validarEdicionCuenta(cuenta, dto.ctaNaturaleza !== undefined);
 
       const updateData: UpdateCuentaData = {};
       if (dto.ctaNombre !== undefined) {
@@ -191,10 +188,10 @@ export class CuentasService {
         await this.cuentasRepository.contarTransaccionesPorCuentas(ctaIds, tx);
 
       if (pendientes > 0) {
-        throw new DomainException(
+        throw new DomainError(
           'CUENTA_CON_TRANSACCIONES_PENDIENTES',
           'No se puede eliminar ni desactivar una cuenta con transacciones pendientes.',
-          HttpStatus.CONFLICT,
+          409,
         );
       }
 
@@ -233,27 +230,11 @@ export class CuentasService {
     return cuenta;
   }
 
-  private crearCuentaNoEncontradaException(): DomainException {
-    return new DomainException(
+  private crearCuentaNoEncontradaException(): DomainError {
+    return new DomainError(
       'CUENTA_NO_ENCONTRADA',
       'La cuenta solicitada no existe o no pertenece al usuario.',
-      HttpStatus.NOT_FOUND,
+      404,
     );
-  }
-
-  private ejecutarReglaDominio(regla: () => void): void {
-    try {
-      regla();
-    } catch (error) {
-      if (error instanceof DomainError) {
-        throw new DomainException(
-          error.code,
-          error.message,
-          error.statusCode,
-          error.details,
-        );
-      }
-      throw error;
-    }
   }
 }

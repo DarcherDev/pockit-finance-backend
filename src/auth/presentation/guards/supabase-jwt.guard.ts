@@ -8,8 +8,9 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
 import jwksClient, { JwksClient } from 'jwks-rsa';
-import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
-import { DomainException } from '../../../common/exceptions/domain.exception';
+import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
+import { extractBearerToken } from '../../../common/auth/bearer-token.util';
+import { DomainError } from '../../../common/domain';
 import { UsuariosService } from '../../../usuarios/application/services/usuarios.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
@@ -64,11 +65,11 @@ export class SupabaseJwtGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithAuth>();
-    const token = this.extractBearerToken(request.headers.authorization);
+    const token = extractBearerToken(request.headers.authorization);
     const payload = await this.verifyJwt(token);
 
     if (typeof payload.sub !== 'string' || payload.sub.trim().length === 0) {
-      throw new DomainException(
+      throw new DomainError(
         'TOKEN_INVALIDO',
         'El token de autenticación no contiene un identificador de usuario válido',
         HttpStatus.UNAUTHORIZED,
@@ -77,7 +78,7 @@ export class SupabaseJwtGuard implements CanActivate {
 
     const usuario = await this.usuariosService.findById(payload.sub);
     if (!usuario) {
-      throw new DomainException(
+      throw new DomainError(
         'USUARIO_NO_REGISTRADO',
         'El usuario autenticado no se encuentra registrado',
         HttpStatus.UNAUTHORIZED,
@@ -90,31 +91,6 @@ export class SupabaseJwtGuard implements CanActivate {
     };
 
     return true;
-  }
-
-  private extractBearerToken(authorizationHeader?: string): string {
-    if (!authorizationHeader) {
-      throw new DomainException(
-        'TOKEN_NO_PROPORCIONADO',
-        'Token de autenticación requerido',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    const parts = authorizationHeader.trim().split(/\s+/);
-    if (
-      parts.length !== 2 ||
-      parts[0].toLowerCase() !== 'bearer' ||
-      !parts[1]
-    ) {
-      throw new DomainException(
-        'TOKEN_INVALIDO',
-        'Formato de encabezado Authorization inválido; se esperaba Bearer <token>',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    return parts[1];
   }
 
   private verifyJwt(token: string): Promise<SupabaseJwtPayload> {
@@ -145,7 +121,7 @@ export class SupabaseJwtGuard implements CanActivate {
           if (error) {
             if (error instanceof jwt.TokenExpiredError) {
               reject(
-                new DomainException(
+                new DomainError(
                   'TOKEN_EXPIRADO',
                   'El token de autenticación ha expirado',
                   HttpStatus.UNAUTHORIZED,
@@ -155,7 +131,7 @@ export class SupabaseJwtGuard implements CanActivate {
             }
 
             reject(
-              new DomainException(
+              new DomainError(
                 'TOKEN_INVALIDO',
                 'Token de autenticación inválido',
                 HttpStatus.UNAUTHORIZED,
@@ -166,7 +142,7 @@ export class SupabaseJwtGuard implements CanActivate {
 
           if (!decoded || typeof decoded === 'string') {
             reject(
-              new DomainException(
+              new DomainError(
                 'TOKEN_INVALIDO',
                 'Payload de token inválido',
                 HttpStatus.UNAUTHORIZED,
