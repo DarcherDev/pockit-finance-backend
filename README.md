@@ -2,6 +2,8 @@
 
 API backend de **Pockit Finance**, sistema móvil y web de auditoría y finanzas personales, construido con **NestJS**, **TypeORM** y **PostgreSQL (Supabase)**.
 
+> **Tablero de Seguimiento (GitHub Projects):** [Pockit Finance - Backend](https://github.com/users/DarcherDev/projects/5)
+
 ## Stack Tecnológico
 
 - **Framework:** NestJS 11 (`@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express`)
